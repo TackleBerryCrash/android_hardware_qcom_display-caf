@@ -85,6 +85,7 @@ int ExternalDisplay::configureHDMIDisplay() {
     openFrameBuffer(mHdmiFbNum);
     if(mFd == -1)
         return -1;
+    readCEUnderscanInfo();
     readResolution();
     // TODO: Move this to activate
     /* Used for changing the resolution
@@ -146,6 +147,8 @@ void ExternalDisplay::processUEventOnline(const char *str) {
     if(!strncmp(s1,"hdmi",strlen(s1))) {
         // hdmi online event..!
         configureHDMIDisplay();
+        // set system property
+        property_set("hw.hdmiON", "1");
     }else if(!strncmp(s1,"wfd",strlen(s1))) {
         // wfd online event..!
         configureWFDDisplay();
@@ -156,6 +159,8 @@ void ExternalDisplay::processUEventOffline(const char *str) {
     const char *s1 = str + strlen("change@/devices/virtual/switch/");
     if(!strncmp(s1,"hdmi",strlen(s1))) {
         teardownHDMIDisplay();
+        // unset system property
+        property_set("hw.hdmiON", "0");
     }else if(!strncmp(s1,"wfd",strlen(s1))) {
         teardownWFDDisplay();
     }
@@ -163,7 +168,7 @@ void ExternalDisplay::processUEventOffline(const char *str) {
 
 ExternalDisplay::ExternalDisplay(hwc_context_t* ctx):mFd(-1),
     mCurrentMode(-1), mConnected(0), mConnectedFbNum(0), mModeCount(0),
-    mHwcContext(ctx), mHdmiFbNum(-1), mWfdFbNum(-1)
+     mUnderscanSupported(false), mHwcContext(ctx), mHdmiFbNum(-1), mWfdFbNum(-1)
 {
     memset(&mVInfo, 0, sizeof(mVInfo));
     //Determine the fb index for external display devices.
@@ -189,7 +194,12 @@ void ExternalDisplay::setHPD(uint32_t startEnd) {
 void ExternalDisplay::setActionSafeDimension(int w, int h) {
     ALOGD_IF(DEBUG,"ActionSafe w=%d h=%d", w, h);
     Mutex::Autolock lock(mExtDispLock);
-    overlay::utils::ActionSafe::getInstance()->setDimension(w, h);
+    char actionsafeWidth[PROPERTY_VALUE_MAX];
+    char actionsafeHeight[PROPERTY_VALUE_MAX];
+    sprintf(actionsafeWidth, "%d", w);
+    property_set("hw.actionsafe.width", actionsafeWidth);
+    sprintf(actionsafeHeight, "%d", h);
+    property_set("hw.actionsafe.height", actionsafeHeight);
     setExternalDisplay(true, mHdmiFbNum);
 }
 
@@ -204,6 +214,75 @@ void ExternalDisplay::getEDIDModes(int *out) const {
     for(int i = 0;i < mModeCount;i++) {
         out[i] = mEDIDModes[i];
     }
+}
+
+void ExternalDisplay::readCEUnderscanInfo()
+{
+    int hdmiScanInfoFile = -1;
+    int len = -1;
+    char scanInfo[17];
+    char *ce_info_str = NULL;
+    const char token[] = ", \n";
+    int ce_info = -1;
+    char sysFsScanInfoFilePath[128];
+    sprintf(sysFsScanInfoFilePath, "/sys/devices/virtual/graphics/fb%d/"
+                                   "scan_info", mHdmiFbNum);
+
+    memset(scanInfo, 0, sizeof(scanInfo));
+    hdmiScanInfoFile = open(sysFsScanInfoFilePath, O_RDONLY, 0);
+    if (hdmiScanInfoFile < 0) {
+        ALOGD_IF(DEBUG, "%s: scan_info file '%s' not found",
+                                __FUNCTION__, sysFsScanInfoFilePath);
+        return;
+    } else {
+        len = read(hdmiScanInfoFile, scanInfo, sizeof(scanInfo)-1);
+        ALOGD("%s: Scan Info string: %s length = %d",
+                 __FUNCTION__, scanInfo, len);
+        if (len <= 0) {
+            close(hdmiScanInfoFile);
+            ALOGE("%s: Scan Info file empty '%s'",
+                                __FUNCTION__, sysFsScanInfoFilePath);
+            return;
+        }
+        scanInfo[len] = '\0';  /* null terminate the string */
+    }
+    close(hdmiScanInfoFile);
+
+    /*
+     * The scan_info contains the three fields
+     * PT - preferred video format
+     * IT - video format
+     * CE video format - containing the underscan support information
+     */
+
+    /* PT */
+    ce_info_str = strtok(scanInfo, token);
+    if (ce_info_str) {
+        /* IT */
+        ce_info_str = strtok(NULL, token);
+        if (ce_info_str) {
+            /* CE */
+            ce_info_str = strtok(NULL, token);
+            if (ce_info_str)
+                ce_info = atoi(ce_info_str);
+        }
+    }
+
+    if (ce_info_str) {
+        // ce_info contains the underscan information
+        if (ce_info == EXT_SCAN_ALWAYS_UNDERSCANED ||
+            ce_info == EXT_SCAN_BOTH_SUPPORTED)
+            // if TV supported underscan, then driver will always underscan
+            // hence no need to apply action safe rectangle
+            mUnderscanSupported = true;
+    } else {
+        ALOGE("%s: scan_info string error", __FUNCTION__);
+    }
+
+    // Store underscan support info in a system property
+    const char* prop = (mUnderscanSupported) ? "1" : "0";
+    property_set("hw.underscan_supported", prop);
+    return;
 }
 
 ExternalDisplay::~ExternalDisplay()
@@ -236,8 +315,9 @@ void disp_mode_timing_type::set_info(struct fb_var_screeninfo &info) const
     info.reserved[0] = 0;
     info.reserved[1] = 0;
     info.reserved[2] = 0;
+#ifndef FB_METADATA_VIDEO_INFO_CODE_SUPPORT
     info.reserved[3] = (info.reserved[3] & 0xFFFF) | (video_format << 16);
-
+#endif
     info.xoffset = 0;
     info.yoffset = 0;
     info.xres = active_h;
@@ -388,6 +468,10 @@ void ExternalDisplay::resetInfo()
     memset(mEDIDModes, 0, sizeof(mEDIDModes));
     mModeCount = 0;
     mCurrentMode = -1;
+    mUnderscanSupported = false;
+    // Reset the underscan supported system property
+    const char* prop = "0";
+    property_set("hw.underscan_supported", prop);
 }
 
 int ExternalDisplay::getModeOrder(int mode)
@@ -523,10 +607,20 @@ void ExternalDisplay::setResolution(int ID)
         mode->set_info(mVInfo);
         ALOGD_IF(DEBUG, "%s: SET Info<ID=%d => Info<ID=%d %dx %d"
                  "(%d,%d,%d), (%d,%d,%d) %dMHz>", __FUNCTION__, ID,
-                 mVInfo.reserved[3], mVInfo.xres, mVInfo.yres,
+                 mode->video_format, mVInfo.xres, mVInfo.yres,
                  mVInfo.right_margin, mVInfo.hsync_len, mVInfo.left_margin,
                  mVInfo.lower_margin, mVInfo.vsync_len, mVInfo.upper_margin,
                  mVInfo.pixclock/1000/1000);
+#ifdef FB_METADATA_VIDEO_INFO_CODE_SUPPORT
+        struct msmfb_metadata metadata;
+        memset(&metadata, 0 , sizeof(metadata));
+        metadata.op = metadata_op_vic;
+        metadata.data.video_info_code = mode->video_format;
+        if (ioctl(mFd, MSMFB_METADATA_SET, &metadata) == -1) {
+            ALOGD("In %s: MSMFB_METADATA_SET failed Err Str = %s",
+                                                 __FUNCTION__, strerror(errno));
+        }
+#endif
         mVInfo.activate = FB_ACTIVATE_NOW | FB_ACTIVATE_ALL | FB_ACTIVATE_FORCE;
         ret = ioctl(mFd, FBIOPUT_VSCREENINFO, &mVInfo);
         if(ret < 0) {

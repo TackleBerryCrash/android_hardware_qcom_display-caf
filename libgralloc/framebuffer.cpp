@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2008 The Android Open Source Project
- * Copyright (c) 2010-2012 Code Aurora Forum. All rights reserved.
+ * Copyright (c) 2010-2012 The Linux Foundation. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -84,40 +84,17 @@ static int fb_setSwapInterval(struct framebuffer_device_t* dev,
     return 0;
 }
 
-static int fb_setUpdateRect(struct framebuffer_device_t* dev,
-                            int l, int t, int w, int h)
-{
-    if (((w|h) <= 0) || ((l|t)<0))
-        return -EINVAL;
-    fb_context_t* ctx = (fb_context_t*)dev;
-    private_module_t* m = reinterpret_cast<private_module_t*>(
-        dev->common.module);
-    m->info.reserved[0] = 0x54445055; // "UPDT";
-    m->info.reserved[1] = (uint16_t)l | ((uint32_t)t << 16);
-    m->info.reserved[2] = (uint16_t)(l+w) | ((uint32_t)(t+h) << 16);
-    return 0;
-}
-
 static int fb_post(struct framebuffer_device_t* dev, buffer_handle_t buffer)
 {
-
-    fb_context_t* ctx = (fb_context_t*) dev;
-
-    private_handle_t *hnd = static_cast<private_handle_t*>
-            (const_cast<native_handle_t*>(buffer));
     private_module_t* m =
         reinterpret_cast<private_module_t*>(dev->common.module);
-
-    if (hnd) {
-        m->info.activate = FB_ACTIVATE_VBL | FB_ACTIVATE_FORCE;
-        m->info.yoffset = hnd->offset / m->finfo.line_length;
-        m->commit.var = m->info;
-        m->commit.flags |= MDP_DISPLAY_COMMIT_OVERLAY;
-        if (ioctl(m->framebuffer->fd, MSMFB_DISPLAY_COMMIT, &m->commit) == -1) {
-            ALOGE("%s: MSMFB_DISPLAY_COMMIT ioctl failed, err: %s", __FUNCTION__,
-                    strerror(errno));
-            return -errno;
-        }
+    struct mdp_display_commit prim_commit;
+    memset(&prim_commit, 0, sizeof(struct mdp_display_commit));
+    prim_commit.flags = MDP_DISPLAY_COMMIT_OVERLAY;
+    if (ioctl(m->framebuffer->fd, MSMFB_DISPLAY_COMMIT, &prim_commit) == -1) {
+        ALOGE("%s: MSMFB_DISPLAY_COMMIT for primary failed, str: %s",
+                __FUNCTION__, strerror(errno));
+        return -errno;
     }
     return 0;
 }
@@ -145,6 +122,10 @@ int mapFrameBufferLocked(struct private_module_t* module)
     int i=0;
     char name[64];
     char property[PROPERTY_VALUE_MAX];
+
+#if defined(MSMFB_METADATA_SET) || defined(MSMFB_METADATA_GET)
+    struct msmfb_metadata metadata;
+#endif
 
     while ((fd==-1) && device_template[i]) {
         snprintf(name, 64, device_template[i], 0);
@@ -246,8 +227,6 @@ int mapFrameBufferLocked(struct private_module_t* module)
     info.yres_virtual = (size * numberOfBuffers) / line_length;
 
 #ifdef MSMFB_METADATA_SET
-    struct msmfb_metadata metadata;
-
     metadata.op = metadata_op_base_blend;
     metadata.flags = 0;
     metadata.data.blend_cfg.is_premultiplied = 1;
@@ -278,9 +257,19 @@ int mapFrameBufferLocked(struct private_module_t* module)
 
     float xdpi = (info.xres * 25.4f) / info.width;
     float ydpi = (info.yres * 25.4f) / info.height;
+#ifdef MSMFB_METADATA_GET
+    memset(&metadata, 0 , sizeof(metadata));
+    metadata.op = metadata_op_frame_rate;
+    if (ioctl(fd, MSMFB_METADATA_GET, &metadata) == -1) {
+        ALOGE("Error retrieving panel frame rate");
+        return -errno;
+    }
+    float fps  = metadata.data.panel_frame_rate;
+#else
+    //XXX: Remove reserved field usage on all baselines
     //The reserved[3] field is used to store FPS by the driver.
     float fps  = info.reserved[3] & 0xFF;
-
+#endif
     ALOGI("using (fd=%d)\n"
           "id           = %s\n"
           "xres         = %d px\n"
@@ -421,11 +410,7 @@ int fb_device_open(hw_module_t const* module, const char* name,
             const_cast<int&>(dev->device.maxSwapInterval) =
                                                         PRIV_MAX_SWAP_INTERVAL;
             const_cast<int&>(dev->device.numFramebuffers) = m->numBuffers;
-            if (m->finfo.reserved[0] == 0x5444 &&
-                m->finfo.reserved[1] == 0x5055) {
-                dev->device.setUpdateRect = fb_setUpdateRect;
-                ALOGD("UPDATE_ON_DEMAND supported");
-            }
+            dev->device.setUpdateRect = 0;
 
             *device = &dev->device.common;
         }

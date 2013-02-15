@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012, Code Aurora Forum. All rights reserved.
+ * Copyright (C) 2012, The Linux Foundation. All rights reserved.
  * Not a Contribution, Apache license notifications and license are retained
  * for attribution purposes only.
  *
@@ -105,6 +105,8 @@ private:
         struct PipeLayerPair* pipeLayer;
 
     };
+    /* checks for mdp comp width limitation */
+    bool isWidthValid(hwc_context_t *ctx, hwc_layer_1_t *layer);
     /* configure's overlay pipes for the frame */
     int configure(hwc_context_t *ctx, hwc_layer_1_t *layer,
                         MdpPipeInfo& mdp_info);

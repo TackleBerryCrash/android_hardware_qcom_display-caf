@@ -33,7 +33,10 @@ ovutils::eDest VideoOverlay::sDest[] = {ovutils::OV_INVALID};
 bool VideoOverlay::prepare(hwc_context_t *ctx, hwc_display_contents_1_t *list,
         int dpy) {
 
-    int yuvIndex =  ctx->listStats[dpy].yuvIndex;
+    if(ctx->listStats[dpy].yuvCount > 1)
+        return false;
+
+    int yuvIndex =  ctx->listStats[dpy].yuvIndices[0];
     sIsModeOn[dpy] = false;
 
     if((!ctx->mMDP.hasOverlay) ||
@@ -54,19 +57,20 @@ bool VideoOverlay::prepare(hwc_context_t *ctx, hwc_display_contents_1_t *list,
 
     //index guaranteed to be not -1 at this point
     hwc_layer_1_t *layer = &list->hwLayers[yuvIndex];
-
-    private_handle_t *hnd = (private_handle_t *)layer->handle;
-    if(ctx->mSecureMode) {
-        if (! isSecureBuffer(hnd)) {
-            ALOGD_IF(VIDEO_DEBUG, "%s: Handle non-secure video layer"
-                     "during secure playback gracefully", __FUNCTION__);
-            return false;
-        }
-    } else {
-        if (isSecureBuffer(hnd)) {
-            ALOGD_IF(VIDEO_DEBUG, "%s: Handle secure video layer"
-                     "during non-secure playback gracefully", __FUNCTION__);
-            return false;
+    if (isSecureModePolicy(ctx->mMDP.version)) {
+        private_handle_t *hnd = (private_handle_t *)layer->handle;
+        if(ctx->mSecureMode) {
+            if (! isSecureBuffer(hnd)) {
+                ALOGD_IF(VIDEO_DEBUG, "%s: Handle non-secure video layer"
+                         "during secure playback gracefully", __FUNCTION__);
+                return false;
+            }
+        } else {
+            if (isSecureBuffer(hnd)) {
+                ALOGD_IF(VIDEO_DEBUG, "%s: Handle secure video layer"
+                         "during non-secure playback gracefully", __FUNCTION__);
+                return false;
+            }
         }
     }
     if(configure(ctx, dpy, layer)) {
@@ -162,6 +166,10 @@ bool VideoOverlay::configure(hwc_context_t *ctx, int dpy,
             displayFrame.top,
             displayFrame.right - displayFrame.left,
             displayFrame.bottom - displayFrame.top);
+    // Calculate the actionsafe dimensions for External(dpy = 1 or 2)
+    if(dpy)
+        getActionSafePosition(ctx, dpy, dpos.x, dpos.y, dpos.w, dpos.h);
+
     ov.setPosition(dpos, dest);
 
     if (!ov.commit(dest)) {
@@ -178,7 +186,7 @@ bool VideoOverlay::draw(hwc_context_t *ctx, hwc_display_contents_1_t *list,
         return true;
     }
 
-    int yuvIndex = ctx->listStats[dpy].yuvIndex;
+    int yuvIndex = ctx->listStats[dpy].yuvIndices[0];
     if(yuvIndex == -1) {
         return true;
     }

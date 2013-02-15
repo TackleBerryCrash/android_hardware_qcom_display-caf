@@ -85,7 +85,6 @@ static void reset(hwc_context_t *ctx, int numDisplays,
                   hwc_display_contents_1_t** displays) {
     memset(ctx->listStats, 0, sizeof(ctx->listStats));
     for(int i = 0; i < HWC_NUM_DISPLAY_TYPES; i++){
-        ctx->listStats[i].yuvIndex = -1;
         hwc_display_contents_1_t *list = displays[i];
         // XXX:SurfaceFlinger no longer guarantees that this
         // value is reset on every prepare. However, for the layer
@@ -333,10 +332,10 @@ static int hwc_set_primary(hwc_context_t *ctx, hwc_display_contents_1_t* list) {
                     ret = -1;
                 }
             }
-            if (ctx->mFbDev->post(ctx->mFbDev, fbLayer->handle)) {
-                ALOGE("%s: ctx->mFbDev->post fail!", __FUNCTION__);
-                return -1;
-            }
+        }
+        if (ctx->mFbDev->post(ctx->mFbDev, fbLayer->handle)) {
+            ALOGE("%s: ctx->mFbDev->post fail!", __FUNCTION__);
+            return -1;
         }
     }
     return ret;

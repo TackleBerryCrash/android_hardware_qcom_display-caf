@@ -10,7 +10,7 @@
 *      copyright notice, this list of conditions and the following
 *      disclaimer in the documentation and/or other materials provided
 *      with the distribution.
-*    * Neither the name of Code Aurora Forum, Inc. nor the names of its
+*    * Neither the name of The Linux Foundation nor the names of its
 *      contributors may be used to endorse or promote products derived
 *      from this software without specific prior written permission.
 *
@@ -238,28 +238,6 @@ struct Whf {
     uint32_t h;
     uint32_t format;
     uint32_t size;
-};
-
-class ActionSafe {
-private:
-    ActionSafe() : mWidth(0.0f), mHeight(0.0f) { };
-    float mWidth;
-    float mHeight;
-    static ActionSafe *sActionSafe;
-public:
-    ~ActionSafe() { };
-    static ActionSafe* getInstance() {
-        if(!sActionSafe) {
-            sActionSafe = new ActionSafe();
-        }
-        return sActionSafe;
-    }
-    void setDimension(int w, int h) {
-        mWidth = (float)w;
-        mHeight = (float)h;
-    }
-    float getWidth() { return mWidth; }
-    float getHeight() { return mHeight; }
 };
 
 enum { MAX_PATH_LEN = 256 };

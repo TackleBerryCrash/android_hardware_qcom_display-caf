@@ -51,7 +51,8 @@ bool MDPComp::init(hwc_context_t *ctx) {
         return false;
     }
 
-    if(!setupBasePipe(ctx)) {
+    if((qdutils::MDPVersion::getInstance().getMDPVersion() >= qdutils::MDP_V4_2) &&
+            !setupBasePipe(ctx)) {
         ALOGE("%s: Failed to setup primary base pipe", __FUNCTION__);
         return false;
     }
@@ -220,6 +221,45 @@ void MDPCompLowRes::setVidInfo(hwc_layer_1_t *layer,
     }
 }
 
+bool MDPCompLowRes::isWidthValid(hwc_context_t *ctx, hwc_layer_1_t *layer) {
+
+    const int dpy = HWC_DISPLAY_PRIMARY;
+    private_handle_t *hnd = (private_handle_t *)layer->handle;
+
+    if(!hnd) {
+        ALOGE("%s: layer handle is NULL", __FUNCTION__);
+        return false;
+    }
+
+    int hw_w = ctx->dpyAttr[dpy].xres;
+    int hw_h = ctx->dpyAttr[dpy].yres;
+
+    hwc_rect_t sourceCrop = layer->sourceCrop;
+    hwc_rect_t displayFrame = layer->displayFrame;
+
+    hwc_rect_t crop =  sourceCrop;
+    int crop_w = crop.right - crop.left;
+    int crop_h = crop.bottom - crop.top;
+
+    hwc_rect_t dst = displayFrame;
+    int dst_w = dst.right - dst.left;
+    int dst_h = dst.bottom - dst.top;
+
+    if(dst.left < 0 || dst.top < 0 || dst.right > hw_w || dst.bottom > hw_h) {
+       qhwc::calculate_crop_rects(crop, dst, hw_w, hw_h, layer->transform);
+       crop_w = crop.right - crop.left;
+       crop_h = crop.bottom - crop.top;
+    }
+
+    //Workaround for MDP HW limitation in DSI command mode panels where
+    //FPS will not go beyond 30 if buffers on RGB pipes are of width < 5
+
+    if(crop_w < 5)
+        return false;
+
+    return true;
+}
+
 /*
  * Configures pipe(s) for MDP composition
  */
@@ -256,7 +296,7 @@ int MDPCompLowRes::configure(hwc_context_t *ctx, hwc_layer_1_t *layer,
             dst.right > hw_w || dst.bottom > hw_h) {
         ALOGD_IF(isDebug(),"%s: Destination has negative coordinates",
                 __FUNCTION__);
-        qhwc::calculate_crop_rects(crop, dst, hw_w, hw_h, 0);
+        qhwc::calculate_crop_rects(crop, dst, hw_w, hw_h, layer->transform);
 
         //Update calulated width and height
         crop_w = crop.right - crop.left;
@@ -414,6 +454,7 @@ bool MDPCompLowRes::isDoable(hwc_context_t *ctx,
         return false;
     }
 
+
     //MDP composition is not efficient if layer needs rotator.
     for(int i = 0; i < numAppLayers; ++i) {
         // As MDP h/w supports flip operation, use MDP comp only for
@@ -424,6 +465,9 @@ bool MDPCompLowRes::isDoable(hwc_context_t *ctx,
             ALOGD_IF(isDebug(), "%s: orientation involved",__FUNCTION__);
             return false;
         }
+
+        if(!isYuvBuffer(hnd) && !isWidthValid(ctx,layer))
+            return false;
     }
     return true;
 }
@@ -469,24 +513,30 @@ bool MDPCompLowRes::allocLayerPipes(hwc_context_t *ctx,
             malloc(sizeof(PipeLayerPair) * currentFrame.count);
 
     if(isYuvPresent(ctx, dpy)) {
-        int nYuvIndex = ctx->listStats[dpy].yuvIndex;
-        hwc_layer_1_t* layer = &list->hwLayers[nYuvIndex];
-        PipeLayerPair& info = currentFrame.pipeLayer[nYuvIndex];
-        MdpPipeInfo& pipe_info = info.pipeIndex;
-        pipe_info.index = getMdpPipe(ctx, MDPCOMP_OV_VG);
-        if(pipe_info.index < 0) {
-            ALOGD_IF(isDebug(), "%s: Unable to get pipe for Videos",
-                    __FUNCTION__);
-            return false;
+        int nYuvCount = ctx->listStats[dpy].yuvCount;
+
+        for(int index = 0; index < nYuvCount; index ++) {
+            int nYuvIndex = ctx->listStats[dpy].yuvIndices[index];
+            hwc_layer_1_t* layer = &list->hwLayers[nYuvIndex];
+            PipeLayerPair& info = currentFrame.pipeLayer[nYuvIndex];
+            MdpPipeInfo& pipe_info = info.pipeIndex;
+            pipe_info.index = getMdpPipe(ctx, MDPCOMP_OV_VG);
+            if(pipe_info.index < 0) {
+                ALOGD_IF(isDebug(), "%s: Unable to get pipe for Videos",
+                        __FUNCTION__);
+                return false;
+            }
+            pipe_info.zOrder = nYuvIndex;
         }
-        pipe_info.zOrder = nYuvIndex;
     }
 
     for(int index = 0 ; index < layer_count ; index++ ) {
-        if(index  == ctx->listStats[dpy].yuvIndex )
+        hwc_layer_1_t* layer = &list->hwLayers[index];
+        private_handle_t *hnd = (private_handle_t *)layer->handle;
+
+        if(isYuvBuffer(hnd))
             continue;
 
-        hwc_layer_1_t* layer = &list->hwLayers[index];
         PipeLayerPair& info = currentFrame.pipeLayer[index];
         MdpPipeInfo& pipe_info = info.pipeIndex;
         pipe_info.index = getMdpPipe(ctx, MDPCOMP_OV_ANY);

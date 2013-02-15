@@ -22,7 +22,6 @@
 #include <gralloc_priv.h>
 #include <fb_priv.h>
 #include "hwc_fbupdate.h"
-#include "external.h"
 
 namespace qhwc {
 
@@ -80,10 +79,6 @@ bool FBUpdateLowRes::configure(hwc_context_t *ctx, hwc_layer_1_t *layer)
         mDest = dest;
 
         ovutils::eMdpFlags mdpFlags = ovutils::OV_MDP_FLAGS_NONE;
-        if(ctx->mSecureMode) {
-            ovutils::setMdpFlags(mdpFlags,
-                    ovutils::OV_MDP_SECURE_OVERLAY_SESSION);
-        }
 
         ovutils::PipeArgs parg(mdpFlags,
                 info,
@@ -109,6 +104,9 @@ bool FBUpdateLowRes::configure(hwc_context_t *ctx, hwc_layer_1_t *layer)
                 displayFrame.top,
                 displayFrame.right - displayFrame.left,
                 displayFrame.bottom - displayFrame.top);
+        // Calculate the actionsafe dimensions for External(dpy = 1 or 2)
+        if(mDpy)
+            getActionSafePosition(ctx, mDpy, dpos.x, dpos.y, dpos.w, dpos.h);
         ov.setPosition(dpos, dest);
 
         ret = true;
@@ -130,7 +128,7 @@ bool FBUpdateLowRes::draw(hwc_context_t *ctx, hwc_layer_1_t *layer)
     ovutils::eDest dest = mDest;
     private_handle_t *hnd = (private_handle_t *)layer->handle;
     if (!ov.queueBuffer(hnd->fd, hnd->offset, dest)) {
-        ALOGE("%s: queueBuffer failed for external", __FUNCTION__);
+        ALOGE("%s: queueBuffer failed for FBUpdate", __FUNCTION__);
         ret = false;
     }
     return ret;
@@ -184,10 +182,6 @@ bool FBUpdateHighRes::configure(hwc_context_t *ctx, hwc_layer_1_t *layer)
         mDestRight = destR;
 
         ovutils::eMdpFlags mdpFlagsL = ovutils::OV_MDP_FLAGS_NONE;
-        if(ctx->mSecureMode) {
-            ovutils::setMdpFlags(mdpFlagsL,
-                    ovutils::OV_MDP_SECURE_OVERLAY_SESSION);
-        }
 
         ovutils::PipeArgs pargL(mdpFlagsL,
                 info,
