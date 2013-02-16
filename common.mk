@@ -29,15 +29,12 @@ ifeq ($(TARGET_BOARD_PLATFORM), msm8974)
     common_flags += -DVENUS_COLOR_FORMAT
 endif
 
-ifeq ($(BOARD_HAVE_OLD_ION_API), true)
-    common_flags += -DOLD_ION_API
-endif
-
 common_deps  :=
 kernel_includes :=
 
-#Kernel includes. Not being executed on JB+
-ifeq ($(call is-vendor-board-platform,QCOM),true)
+# Executed only on QCOM BSPs
+ifeq ($(TARGET_USES_QCOM_BSP),true)
+    common_flags += -DQCOM_BSP
     common_deps += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
     kernel_includes += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
 endif

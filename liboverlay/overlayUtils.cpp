@@ -231,7 +231,8 @@ int getMdpFormat(int format) {
             return MDP_Y_CBCR_H1V1;
         case HAL_PIXEL_FORMAT_YCrCb_444_SP:
             return MDP_Y_CRCB_H1V1;
-
+        case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
+            return MDP_Y_CBCR_H2V2_VENUS;
         default:
             //Unsupported by MDP
             //---graphics.h--------
@@ -327,6 +328,11 @@ uint32_t getS3DFormat(uint32_t fmt) {
         }
     }
     return fmt3D;
+}
+
+bool isMdssRotator() {
+    int mdpVersion = qdutils::MDPVersion::getInstance().getMDPVersion();
+    return (mdpVersion >= qdutils::MDSS_V5);
 }
 
 } // utils

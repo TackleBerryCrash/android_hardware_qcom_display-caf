@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2008 The Android Open Source Project
- * Copyright (c) 2010-2012, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2010-2013, The Linux Foundation. All rights reserved.
  * Not a Contribution, Apache license notifications and license are retained
  * for attribution purposes only.
  *
@@ -30,6 +30,9 @@
 #define MDSS_MDP_ROT_ONLY 0x80
 #endif
 
+#define SIZE_1M 0x00100000
+#define MDSS_ROT_MASK (MDP_ROT_90 | MDP_FLIP_UD | MDP_FLIP_LR)
+
 namespace ovutils = overlay::utils;
 
 namespace overlay {
@@ -40,29 +43,34 @@ MdssRot::MdssRot() {
 
 MdssRot::~MdssRot() { close(); }
 
-void MdssRot::setEnable() { mEnabled = true; }
+inline void MdssRot::setEnable() { mEnabled = true; }
 
-void MdssRot::setDisable() { mEnabled = false; }
+inline void MdssRot::setDisable() { mEnabled = false; }
 
-bool MdssRot::enabled() const { return mEnabled; }
+inline bool MdssRot::enabled() const { return mEnabled; }
 
-void MdssRot::setRotations(uint32_t flags) { mRotInfo.flags |= flags; }
+inline void MdssRot::setRotations(uint32_t flags) { mRotInfo.flags |= flags; }
 
-int MdssRot::getDstMemId() const {
+inline int MdssRot::getDstMemId() const {
     return mRotData.dst_data.memory_id;
 }
 
-uint32_t MdssRot::getDstOffset() const {
+inline uint32_t MdssRot::getDstOffset() const {
     return mRotData.dst_data.offset;
 }
 
-uint32_t MdssRot::getSessId() const { return mRotInfo.id; }
+inline uint32_t MdssRot::getDstFormat() const {
+    //For mdss src and dst formats are same
+    return mRotInfo.src.format;
+}
 
-void MdssRot::setSrcFB() {
+inline uint32_t MdssRot::getSessId() const { return mRotInfo.id; }
+
+inline void MdssRot::setSrcFB() {
     mRotData.data.flags |= MDP_MEMORY_ID_TYPE_FB;
 }
 
-bool MdssRot::init() {
+inline bool MdssRot::init() {
     if(!utils::openDev(mFd, 0, Res::fbPath, O_RDWR)) {
         ALOGE("MdssRot failed to init fb0");
         return false;
@@ -92,17 +100,13 @@ void MdssRot::setSource(const overlay::utils::Whf& awhf) {
     mBufSize = awhf.size;
 }
 
-void MdssRot::setDownscale(int ds) {
+inline void MdssRot::setDownscale(int ds) {}
+
+inline void MdssRot::setFlags(const utils::eMdpFlags& flags) {
+    mRotInfo.flags |= flags;
 }
 
-void MdssRot::setFlags(const utils::eMdpFlags& flags) {
-    mRotInfo.flags &= ~utils::OV_MDP_SECURE_OVERLAY_SESSION;
-    if (flags & utils::OV_MDP_SECURE_OVERLAY_SESSION) {
-        mRotInfo.flags |= utils::OV_MDP_SECURE_OVERLAY_SESSION;
-    }
-}
-
-void MdssRot::setTransform(const utils::eTransform& rot)
+inline void MdssRot::setTransform(const utils::eTransform& rot)
 {
     int flags = utils::getMdpOrient(rot);
     if (flags != -1)
@@ -113,20 +117,21 @@ void MdssRot::setTransform(const utils::eTransform& rot)
     ALOGE_IF(DEBUG_OVERLAY, "%s: rot=%d", __FUNCTION__, flags);
 }
 
-void MdssRot::setRotatorUsed(const bool& rotUsed) {
+inline void MdssRot::setRotatorUsed(const bool& rotUsed) {
     setDisable();
     if(rotUsed) {
         setEnable();
     }
 }
 
-void MdssRot::doTransform() {
+inline void MdssRot::doTransform() {
     if(mOrientation & utils::OVERLAY_TRANSFORM_ROT_90)
         utils::swap(mRotInfo.dst_rect.w, mRotInfo.dst_rect.h);
 }
 
 bool MdssRot::commit() {
     doTransform();
+    setBufSize(mRotInfo.src.format);
     mRotInfo.flags |= MDSS_MDP_ROT_ONLY;
     if(!overlay::mdp_wrapper::setOverlay(mFd.getFD(), mRotInfo)) {
         ALOGE("MdssRot commit failed!");
@@ -134,6 +139,8 @@ bool MdssRot::commit() {
         return false;
     }
     mRotData.id = mRotInfo.id;
+    // reset rotation flags to avoid stale orientation values
+    mRotInfo.flags &= ~MDSS_ROT_MASK;
     return true;
 }
 
@@ -257,4 +264,24 @@ void MdssRot::dump() const {
     ALOGE("== Dump MdssRot end ==");
 }
 
+void MdssRot::setBufSize(int format) {
+
+    switch (format) {
+        case MDP_Y_CBCR_H2V2_VENUS:
+            mBufSize = VENUS_BUFFER_SIZE(COLOR_FMT_NV12, mRotInfo.dst_rect.w,
+                                         mRotInfo.dst_rect.h);
+            break;
+
+        case MDP_Y_CR_CB_GH2V2:
+            int alignedw = utils::align(mRotInfo.dst_rect.w, 16);
+            int alignedh = mRotInfo.dst_rect.h;
+            mBufSize = (alignedw*alignedh) +
+                (utils::align(alignedw/2, 16) * (alignedh/2))*2;
+            mBufSize = utils::align(mBufSize, 4096);
+            break;
+    }
+
+    if (mRotInfo.flags & utils::OV_MDP_SECURE_OVERLAY_SESSION)
+        mBufSize = utils::align(mBufSize, SIZE_1M);
+}
 } // namespace overlay

@@ -20,6 +20,7 @@
 #include "hwc_video.h"
 #include "hwc_utils.h"
 #include "mdp_version.h"
+#include "qdMetaData.h"
 
 namespace qhwc {
 
@@ -112,6 +113,13 @@ bool VideoOverlay::configure(hwc_context_t *ctx, int dpy,
         ovutils::setMdpFlags(mdpFlags,
                 ovutils::OV_MDP_BLEND_FG_PREMULT);
     }
+
+#ifdef QCOM_BSP
+    MetaData_t *metadata = (MetaData_t *)hnd->base_metadata;
+    if ((metadata->operation & PP_PARAM_INTERLACED) && metadata->interlaced) {
+        ovutils::setMdpFlags(mdpFlags, ovutils::OV_MDP_DEINTERLACE);
+    }
+#endif
 
     ovutils::eIsFg isFgFlag = ovutils::IS_FG_OFF;
     if (ctx->listStats[dpy].numAppLayers == 1) {
