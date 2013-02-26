@@ -62,10 +62,12 @@ public:
     virtual uint32_t getSessId() const = 0;
     virtual bool queueBuffer(int fd, uint32_t offset) = 0;
     virtual void dump() const = 0;
+    virtual void getDump(char *buf, size_t len) const = 0;
     static Rotator *getRotator();
 
 protected:
     explicit Rotator() {}
+    static uint32_t calcOutputBufSize(const utils::Whf& destWhf);
 
 private:
     /*Returns rotator h/w type */
@@ -133,6 +135,7 @@ public:
     virtual uint32_t getSessId() const;
     virtual bool queueBuffer(int fd, uint32_t offset);
     virtual void dump() const;
+    virtual void getDump(char *buf, size_t len) const;
 
 private:
     explicit MdpRot();
@@ -143,13 +146,14 @@ private:
     void doTransform();
     /* reset underlying data, basically memset 0 */
     void reset();
-
     /* return true if current rotator config is different
      * than last known config */
     bool rotConfChanged() const;
-
     /* save mRotImgInfo to be last known good config*/
     void save();
+    /* Calculates the rotator's o/p buffer size post the transform calcs and
+     * knowing the o/p format depending on whether fastYuv is enabled or not */
+    uint32_t calcOutputBufSize();
 
     /* rot info*/
     msm_rotator_img_info mRotImgInfo;
@@ -163,8 +167,6 @@ private:
     OvFD mFd;
     /* Rotator memory manager */
     RotMem mMem;
-    /* Single Rotator buffer size */
-    uint32_t mBufSize;
 
     friend Rotator* Rotator::getRotator();
 };
@@ -195,6 +197,7 @@ public:
     virtual uint32_t getSessId() const;
     virtual bool queueBuffer(int fd, uint32_t offset);
     virtual void dump() const;
+    virtual void getDump(char *buf, size_t len) const;
 
 private:
     explicit MdssRot();
@@ -205,7 +208,9 @@ private:
     void doTransform();
     /* reset underlying data, basically memset 0 */
     void reset();
-    void setBufSize(int format);
+    /* Calculates the rotator's o/p buffer size post the transform calcs and
+     * knowing the o/p format depending on whether fastYuv is enabled or not */
+    uint32_t calcOutputBufSize();
 
     /* MdssRot info structure */
     mdp_overlay   mRotInfo;
@@ -217,8 +222,6 @@ private:
     OvFD mFd;
     /* Rotator memory manager */
     RotMem mMem;
-    /* Single Rotator buffer size */
-    uint32_t mBufSize;
     /* Enable/Disable Mdss Rot*/
     bool mEnabled;
 

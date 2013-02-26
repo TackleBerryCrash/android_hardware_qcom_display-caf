@@ -58,15 +58,12 @@ inline void MdpRot::setSrcFB() {
 }
 
 void MdpRot::setDownscale(int ds) {
-    if (mRotImgInfo.src.format == MDP_Y_CR_CB_GH2V2 &&
-                            (mRotImgInfo.src_rect.h & 0xF)) {
-        mRotImgInfo.src_rect.h = utils::aligndown(mRotImgInfo.src_rect.h, 16);
-    } else if ((utils::ROT_DS_EIGHTH == ds) && (mRotImgInfo.src_rect.h & 0xF)) {
+    if ((utils::ROT_DS_EIGHTH == ds) && (mRotImgInfo.src_rect.h & 0xF)) {
         // Ensure src_rect.h is a multiple of 16 for 1/8 downscaling.
         // This is an undocumented MDP Rotator constraint.
         // Note that src_rect.h is already ensured to be 32 pixel height aligned
         // for MDP_Y_CRCB_H2V2_TILE and MDP_Y_CBCR_H2V2_TILE formats.
-        mRotImgInfo.src_rect.h = utils::alignup(mRotImgInfo.src_rect.h, 16);
+        mRotImgInfo.src_rect.h = utils::aligndown(mRotImgInfo.src_rect.h, 16);
     }
     mRotImgInfo.downscale_ratio = ds;
 }
@@ -111,8 +108,6 @@ void MdpRot::setSource(const overlay::utils::Whf& awhf) {
 
     mRotImgInfo.dst.width = whf.w;
     mRotImgInfo.dst.height = whf.h;
-
-    mBufSize = awhf.size;
 }
 
 inline void MdpRot::setFlags(const utils::eMdpFlags& flags) {
@@ -155,6 +150,12 @@ bool MdpRot::commit() {
         mRotDataInfo.session_id = mRotImgInfo.session_id;
     }
     return true;
+}
+
+uint32_t MdpRot::calcOutputBufSize() {
+    ovutils::Whf destWhf(mRotImgInfo.dst.width,
+            mRotImgInfo.dst.height, mRotImgInfo.dst.format);
+    return Rotator::calcOutputBufSize(destWhf);
 }
 
 bool MdpRot::open_i(uint32_t numbufs, uint32_t bufsz)
@@ -201,8 +202,9 @@ bool MdpRot::close() {
 
 bool MdpRot::remap(uint32_t numbufs) {
     // if current size changed, remap
-    if(mBufSize == mMem.curr().size()) {
-        ALOGE_IF(DEBUG_OVERLAY, "%s: same size %d", __FUNCTION__, mBufSize);
+    uint32_t opBufSize = calcOutputBufSize();
+    if(opBufSize == mMem.curr().size()) {
+        ALOGE_IF(DEBUG_OVERLAY, "%s: same size %d", __FUNCTION__, opBufSize);
         return true;
     }
 
@@ -211,12 +213,12 @@ bool MdpRot::remap(uint32_t numbufs) {
 
     // ++mMem will make curr to be prev, and prev will be curr
     ++mMem;
-    if(!open_i(numbufs, mBufSize)) {
+    if(!open_i(numbufs, opBufSize)) {
         ALOGE("%s Error could not open", __FUNCTION__);
         return false;
     }
     for (uint32_t i = 0; i < numbufs; ++i) {
-        mMem.curr().mRotOffset[i] = i * mBufSize;
+        mMem.curr().mRotOffset[i] = i * opBufSize;
     }
     return true;
 }
@@ -229,7 +231,6 @@ void MdpRot::reset() {
     ovutils::memset0(mMem.prev().mRotOffset);
     mMem.curr().mCurrOffset = 0;
     mMem.prev().mCurrOffset = 0;
-    mBufSize = 0;
     mOrientation = utils::OVERLAY_TRANSFORM_0;
 }
 
@@ -273,6 +274,11 @@ void MdpRot::dump() const {
     mdp_wrapper::dump("mRotImgInfo", mRotImgInfo);
     mdp_wrapper::dump("mRotDataInfo", mRotDataInfo);
     ALOGE("== Dump MdpRot end ==");
+}
+
+void MdpRot::getDump(char *buf, size_t len) const {
+    ovutils::getDump(buf, len, "MdpRotCtrl(msm_rotator_img_info)", mRotImgInfo);
+    ovutils::getDump(buf, len, "MdpRotData(msm_rotator_data_info)", mRotDataInfo);
 }
 
 } // namespace overlay

@@ -36,6 +36,7 @@
 #include <hardware/hardware.h>
 #include <hardware/gralloc.h> // buffer_handle_t
 #include <linux/msm_mdp.h> // flags
+#include <linux/msm_rotator.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -411,7 +412,8 @@ struct ScreenInfo {
 };
 
 int getMdpFormat(int format);
-int getRotOutFmt(uint32_t format);
+int getHALFormat(int mdpFormat);
+
 /* flip is upside down and such. V, H flip
  * rotation is 90, 180 etc
  * It returns MDP related enum/define that match rot+flip*/
@@ -586,29 +588,6 @@ inline int getMdpOrient(eTransform rotation) {
     return -1;
 }
 
-inline int getRotOutFmt(uint32_t format) {
-
-    if (isMdssRotator())
-        return format;
-
-    switch (format) {
-        case MDP_Y_CRCB_H2V2_TILE:
-            return MDP_Y_CRCB_H2V2;
-        case MDP_Y_CBCR_H2V2_TILE:
-            return MDP_Y_CBCR_H2V2;
-        case MDP_Y_CB_CR_H2V2:
-            return MDP_Y_CBCR_H2V2;
-        case MDP_Y_CR_CB_GH2V2:
-            return MDP_Y_CRCB_H2V2;
-        default:
-            return format;
-    }
-    // not reached
-    OVASSERT(false, "%s not reached", __FUNCTION__);
-    return -1;
-}
-
-
 inline uint32_t getColorFormat(uint32_t format)
 {
     return (format == HAL_PIXEL_FORMAT_YV12) ?
@@ -772,6 +751,17 @@ inline eMdpPipeType getPipeType(eDest dest) {
     }
     return OV_MDP_PIPE_ANY;
 }
+
+void getDump(char *buf, size_t len, const char *prefix, const mdp_overlay& ov);
+void getDump(char *buf, size_t len, const char *prefix, const msmfb_img& ov);
+void getDump(char *buf, size_t len, const char *prefix, const mdp_rect& ov);
+void getDump(char *buf, size_t len, const char *prefix,
+        const msmfb_overlay_data& ov);
+void getDump(char *buf, size_t len, const char *prefix, const msmfb_data& ov);
+void getDump(char *buf, size_t len, const char *prefix,
+        const msm_rotator_img_info& ov);
+void getDump(char *buf, size_t len, const char *prefix,
+        const msm_rotator_data_info& ov);
 
 } // namespace utils ends
 

@@ -243,7 +243,50 @@ int getMdpFormat(int format) {
             //HAL_PIXEL_FORMAT_YCrCb_420_SP_ADRENO    = 0x7FA30C01
             //HAL_PIXEL_FORMAT_R_8                    = 0x10D
             //HAL_PIXEL_FORMAT_RG_88                  = 0x10E
-            ALOGE("%s: Unsupported format = 0x%x", __func__, format);
+            ALOGE("%s: Unsupported HAL format = 0x%x", __func__, format);
+            return -1;
+    }
+    // not reached
+    return -1;
+}
+
+//Takes mdp format as input and translates to equivalent HAL format
+//Refer to graphics.h, gralloc_priv.h, msm_mdp.h for formats.
+int getHALFormat(int mdpFormat) {
+    switch (mdpFormat) {
+        //From graphics.h
+        case MDP_RGBA_8888:
+            return HAL_PIXEL_FORMAT_RGBA_8888;
+        case MDP_RGBX_8888:
+            return HAL_PIXEL_FORMAT_RGBX_8888;
+        case MDP_RGB_888:
+            return HAL_PIXEL_FORMAT_RGB_888;
+        case MDP_RGB_565:
+            return HAL_PIXEL_FORMAT_RGB_565;
+        case MDP_BGRA_8888:
+            return HAL_PIXEL_FORMAT_BGRA_8888;
+        case MDP_Y_CR_CB_GH2V2:
+            return HAL_PIXEL_FORMAT_YV12;
+        case MDP_Y_CBCR_H2V1:
+            return HAL_PIXEL_FORMAT_YCbCr_422_SP;
+        case MDP_Y_CRCB_H2V2:
+            return HAL_PIXEL_FORMAT_YCrCb_420_SP;
+
+        //From gralloc_priv.h
+        case MDP_Y_CBCR_H2V2_TILE:
+            return HAL_PIXEL_FORMAT_YCbCr_420_SP_TILED;
+        case MDP_Y_CBCR_H2V2:
+            return HAL_PIXEL_FORMAT_YCbCr_420_SP;
+        case MDP_Y_CRCB_H2V1:
+            return HAL_PIXEL_FORMAT_YCrCb_422_SP;
+        case MDP_Y_CBCR_H1V1:
+            return HAL_PIXEL_FORMAT_YCbCr_444_SP;
+        case MDP_Y_CRCB_H1V1:
+            return HAL_PIXEL_FORMAT_YCrCb_444_SP;
+        case MDP_Y_CBCR_H2V2_VENUS:
+            return HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS;
+        default:
+            ALOGE("%s: Unsupported MDP format = 0x%x", __func__, mdpFormat);
             return -1;
     }
     // not reached
@@ -333,6 +376,83 @@ uint32_t getS3DFormat(uint32_t fmt) {
 bool isMdssRotator() {
     int mdpVersion = qdutils::MDPVersion::getInstance().getMDPVersion();
     return (mdpVersion >= qdutils::MDSS_V5);
+}
+
+void getDump(char *buf, size_t len, const char *prefix,
+        const mdp_overlay& ov) {
+    char str[256] = {'\0'};
+    snprintf(str, 256,
+            "%s id=%d z=%d fg=%d alpha=%d mask=%d flags=0x%x\n",
+            prefix, ov.id, ov.z_order, ov.is_fg, ov.alpha,
+            ov.transp_mask, ov.flags);
+    strncat(buf, str, strlen(str));
+    getDump(buf, len, "\tsrc(msmfb_img)", ov.src);
+    getDump(buf, len, "\tsrc_rect(mdp_rect)", ov.src_rect);
+    getDump(buf, len, "\tdst_rect(mdp_rect)", ov.dst_rect);
+}
+
+void getDump(char *buf, size_t len, const char *prefix,
+        const msmfb_img& ov) {
+    char str_src[256] = {'\0'};
+    snprintf(str_src, 256,
+            "%s w=%d h=%d format=%d %s\n",
+            prefix, ov.width, ov.height, ov.format,
+            overlay::utils::getFormatString(ov.format));
+    strncat(buf, str_src, strlen(str_src));
+}
+
+void getDump(char *buf, size_t len, const char *prefix,
+        const mdp_rect& ov) {
+    char str_rect[256] = {'\0'};
+    snprintf(str_rect, 256,
+            "%s x=%d y=%d w=%d h=%d\n",
+            prefix, ov.x, ov.y, ov.w, ov.h);
+    strncat(buf, str_rect, strlen(str_rect));
+}
+
+void getDump(char *buf, size_t len, const char *prefix,
+        const msmfb_overlay_data& ov) {
+    char str[256] = {'\0'};
+    snprintf(str, 256,
+            "%s id=%d\n",
+            prefix, ov.id);
+    strncat(buf, str, strlen(str));
+    getDump(buf, len, "\tdata(msmfb_data)", ov.data);
+}
+
+void getDump(char *buf, size_t len, const char *prefix,
+        const msmfb_data& ov) {
+    char str_data[256] = {'\0'};
+    snprintf(str_data, 256,
+            "%s offset=%d memid=%d id=%d flags=0x%x priv=%d\n",
+            prefix, ov.offset, ov.memory_id, ov.id, ov.flags,
+            ov.priv);
+    strncat(buf, str_data, strlen(str_data));
+}
+
+void getDump(char *buf, size_t len, const char *prefix,
+        const msm_rotator_img_info& rot) {
+    char str[256] = {'\0'};
+    snprintf(str, 256, "%s sessid=%u rot=%d, enable=%d downscale=%d\n",
+            prefix, rot.session_id, rot.rotations, rot.enable,
+            rot.downscale_ratio);
+    strncat(buf, str, strlen(str));
+    getDump(buf, len, "\tsrc", rot.src);
+    getDump(buf, len, "\tdst", rot.dst);
+    getDump(buf, len, "\tsrc_rect", rot.src_rect);
+}
+
+void getDump(char *buf, size_t len, const char *prefix,
+        const msm_rotator_data_info& rot) {
+    char str[256] = {'\0'};
+    snprintf(str, 256,
+            "%s sessid=%u verkey=%d\n",
+            prefix, rot.session_id, rot.version_key);
+    strncat(buf, str, strlen(str));
+    getDump(buf, len, "\tsrc", rot.src);
+    getDump(buf, len, "\tdst", rot.dst);
+    getDump(buf, len, "\tsrc_chroma", rot.src_chroma);
+    getDump(buf, len, "\tdst_chroma", rot.dst_chroma);
 }
 
 } // utils
