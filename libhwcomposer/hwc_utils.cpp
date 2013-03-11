@@ -19,6 +19,7 @@
  */
 #define HWC_UTILS_DEBUG 0
 #include <sys/ioctl.h>
+#include <binder/IServiceManager.h>
 #include <EGL/egl.h>
 #include <cutils/properties.h>
 #include <gralloc_priv.h>
@@ -30,8 +31,14 @@
 #include "mdp_version.h"
 #include "hwc_copybit.h"
 #include "external.h"
+#include "hwc_qclient.h"
 #include "QService.h"
 #include "comptype.h"
+
+using namespace qClient;
+using namespace qService;
+using namespace android;
+
 namespace qhwc {
 
 // Opens Framebuffer device
@@ -60,7 +67,6 @@ void initContext(hwc_context_t *ctx)
     openFramebufferDevice(ctx);
     overlay::Overlay::initOverlay();
     ctx->mOverlay = overlay::Overlay::getInstance();
-    ctx->mQService = qService::QService::getInstance(ctx);
     ctx->mMDP.version = qdutils::MDPVersion::getInstance().getMDPVersion();
     ctx->mMDP.hasOverlay = qdutils::MDPVersion::getInstance().hasOverlay();
     ctx->mMDP.panel = qdutils::MDPVersion::getInstance().getPanelType();
@@ -71,7 +77,6 @@ void initContext(hwc_context_t *ctx)
         IFBUpdate::getObject(ctx->dpyAttr[HWC_DISPLAY_PRIMARY].xres,
         HWC_DISPLAY_PRIMARY);
 
-#ifdef QCOM_BSP
     char value[PROPERTY_VALUE_MAX];
     // Check if the target supports copybit compostion (dyn/mdp/c2d) to
     // decide if we need to open the copybit module.
@@ -83,10 +88,9 @@ void initContext(hwc_context_t *ctx)
                            qdutils::COMPOSITION_TYPE_C2D)) {
             ctx->mCopyBit[HWC_DISPLAY_PRIMARY] = new CopyBit();
     }
-#endif
 
     ctx->mExtDisplay = new ExternalDisplay(ctx);
-    for (uint32_t i = 0; i < HWC_NUM_DISPLAY_TYPES; i++)
+    for (uint32_t i = 0; i < MAX_DISPLAYS; i++)
         ctx->mLayerCache[i] = new LayerCache();
     ctx->mMDPComp = MDPComp::getObject(ctx->dpyAttr[HWC_DISPLAY_PRIMARY].xres);
     MDPComp::init(ctx);
@@ -94,7 +98,17 @@ void initContext(hwc_context_t *ctx)
     pthread_mutex_init(&(ctx->vstate.lock), NULL);
     pthread_cond_init(&(ctx->vstate.cond), NULL);
     ctx->vstate.enable = false;
+    ctx->vstate.fakevsync = false;
     ctx->mExtDispConfiguring = false;
+
+    //Right now hwc starts the service but anybody could do it, or it could be
+    //independent process as well.
+    QService::init();
+    sp<IQClient> client = new QClient(ctx);
+    interface_cast<IQService>(
+            defaultServiceManager()->getService(
+            String16("display.qservice")))->connect(client);
+
     ALOGI("Initializing Qualcomm Hardware Composer");
     ALOGI("MDP version: %d", ctx->mMDP.version);
 }
@@ -106,7 +120,7 @@ void closeContext(hwc_context_t *ctx)
         ctx->mOverlay = NULL;
     }
 
-    for(int i = 0; i< HWC_NUM_DISPLAY_TYPES; i++) {
+    for(int i = 0; i < MAX_DISPLAYS; i++) {
         if(ctx->mCopyBit[i]) {
             delete ctx->mCopyBit[i];
             ctx->mCopyBit[i] = NULL;
@@ -125,7 +139,7 @@ void closeContext(hwc_context_t *ctx)
         ctx->mExtDisplay = NULL;
     }
 
-    for(int i = 0; i < HWC_NUM_DISPLAY_TYPES; i++) {
+    for(int i = 0; i < MAX_DISPLAYS; i++) {
         if(ctx->mFBUpdate[i]) {
             delete ctx->mFBUpdate[i];
             ctx->mFBUpdate[i] = NULL;
@@ -199,7 +213,7 @@ void getActionSafePosition(hwc_context_t *ctx, int dpy, uint32_t& x,
     return;
 }
 
-static inline bool isAlphaScaled(hwc_layer_1_t const* layer) {
+bool needsScaling(hwc_layer_1_t const* layer) {
     int dst_w, dst_h, src_w, src_h;
 
     hwc_rect_t displayFrame  = layer->displayFrame;
@@ -211,7 +225,14 @@ static inline bool isAlphaScaled(hwc_layer_1_t const* layer) {
     src_w = sourceCrop.right - sourceCrop.left;
     src_h = sourceCrop.bottom - sourceCrop.top;
 
-    if(((src_w != dst_w) || (src_h != dst_h))) {
+    if(((src_w != dst_w) || (src_h != dst_h)))
+        return true;
+
+    return false;
+}
+
+bool isAlphaScaled(hwc_layer_1_t const* layer) {
+    if(needsScaling(layer)) {
         if(layer->blending != HWC_BLENDING_NONE)
             return true;
     }
@@ -226,6 +247,7 @@ void setListStats(hwc_context_t *ctx,
     ctx->listStats[dpy].skipCount = 0;
     ctx->listStats[dpy].needsAlphaScale = false;
     ctx->listStats[dpy].yuvCount = 0;
+    ctx->mDMAInUse = false;
 
     for (size_t i = 0; i < list->numHwLayers; i++) {
         hwc_layer_1_t const* layer = &list->hwLayers[i];
@@ -243,6 +265,9 @@ void setListStats(hwc_context_t *ctx,
             int& yuvCount = ctx->listStats[dpy].yuvCount;
             ctx->listStats[dpy].yuvIndices[yuvCount] = i;
             yuvCount++;
+
+            if((layer->transform & HWC_TRANSFORM_ROT_90) && !ctx->mDMAInUse)
+                ctx->mDMAInUse = true;
         }
 
         if(!ctx->listStats[dpy].needsAlphaScale)
@@ -287,7 +312,8 @@ bool isSecureModePolicy(int mdpVersion) {
 
 //Crops source buffer against destination and FB boundaries
 void calculate_crop_rects(hwc_rect_t& crop, hwc_rect_t& dst,
-        const int fbWidth, const int fbHeight, int orient) {
+                          const hwc_rect_t& scissor, int orient) {
+
     int& crop_l = crop.left;
     int& crop_t = crop.top;
     int& crop_r = crop.right;
@@ -302,24 +328,34 @@ void calculate_crop_rects(hwc_rect_t& crop, hwc_rect_t& dst,
     int dst_w = abs(dst.right - dst.left);
     int dst_h = abs(dst.bottom - dst.top);
 
+    const int& sci_l = scissor.left;
+    const int& sci_t = scissor.top;
+    const int& sci_r = scissor.right;
+    const int& sci_b = scissor.bottom;
+    int sci_w = abs(sci_r - sci_l);
+    int sci_h = abs(sci_b - sci_t);
+
     float leftCutRatio = 0.0f, rightCutRatio = 0.0f, topCutRatio = 0.0f,
             bottomCutRatio = 0.0f;
 
-    if(dst_l < 0) {
-        leftCutRatio = (float)(0.0f - dst_l) / (float)dst_w;
-        dst_l = 0;
+    if(dst_l < sci_l) {
+        leftCutRatio = (float)(sci_l - dst_l) / (float)dst_w;
+        dst_l = sci_l;
     }
-    if(dst_r > fbWidth) {
-        rightCutRatio = (float)(dst_r - fbWidth) / (float)dst_w;
-        dst_r = fbWidth;
+
+    if(dst_r > sci_r) {
+        rightCutRatio = (float)(dst_r - sci_r) / (float)dst_w;
+        dst_r = sci_r;
     }
-    if(dst_t < 0) {
-        topCutRatio = (float)(0 - dst_t) / (float)dst_h;
-        dst_t = 0;
+
+    if(dst_t < sci_t) {
+        topCutRatio = (float)(sci_t - dst_t) / (float)dst_h;
+        dst_t = sci_t;
     }
-    if(dst_b > fbHeight) {
-        bottomCutRatio = (float)(dst_b - fbHeight) / (float)dst_h;
-        dst_b = fbHeight;
+
+    if(dst_b > sci_b) {
+        bottomCutRatio = (float)(dst_b - sci_b) / (float)dst_h;
+        dst_b = sci_b;
     }
 
     calc_cut(leftCutRatio, topCutRatio, rightCutRatio, bottomCutRatio, orient);
@@ -329,8 +365,46 @@ void calculate_crop_rects(hwc_rect_t& crop, hwc_rect_t& dst,
     crop_b -= crop_h * bottomCutRatio;
 }
 
+void getNonWormholeRegion(hwc_display_contents_1_t* list,
+                              hwc_rect_t& nwr)
+{
+    uint32_t last = list->numHwLayers - 1;
+    hwc_rect_t fbDisplayFrame = list->hwLayers[last].displayFrame;
+    //Initiliaze nwr to first frame
+    nwr.left =  list->hwLayers[0].displayFrame.left;
+    nwr.top =  list->hwLayers[0].displayFrame.top;
+    nwr.right =  list->hwLayers[0].displayFrame.right;
+    nwr.bottom =  list->hwLayers[0].displayFrame.bottom;
+
+    for (uint32_t i = 1; i < last; i++) {
+        hwc_rect_t displayFrame = list->hwLayers[i].displayFrame;
+        nwr.left   = min(nwr.left, displayFrame.left);
+        nwr.top    = min(nwr.top, displayFrame.top);
+        nwr.right  = max(nwr.right, displayFrame.right);
+        nwr.bottom = max(nwr.bottom, displayFrame.bottom);
+    }
+
+    //Intersect with the framebuffer
+    nwr.left   = max(nwr.left, fbDisplayFrame.left);
+    nwr.top    = max(nwr.top, fbDisplayFrame.top);
+    nwr.right  = min(nwr.right, fbDisplayFrame.right);
+    nwr.bottom = min(nwr.bottom, fbDisplayFrame.bottom);
+
+}
+
 bool isExternalActive(hwc_context_t* ctx) {
     return ctx->dpyAttr[HWC_DISPLAY_EXTERNAL].isActive;
+}
+
+void closeAcquireFds(hwc_display_contents_1_t* list) {
+    for(uint32_t i = 0; list && i < list->numHwLayers; i++) {
+        //Close the acquireFenceFds
+        //HWC_FRAMEBUFFER are -1 already by SF, rest we close.
+        if(list->hwLayers[i].acquireFenceFd >= 0) {
+            close(list->hwLayers[i].acquireFenceFd);
+            list->hwLayers[i].acquireFenceFd = -1;
+        }
+    }
 }
 
 int hwc_sync(hwc_context_t *ctx, hwc_display_contents_1_t* list, int dpy,
@@ -384,22 +458,15 @@ int hwc_sync(hwc_context_t *ctx, hwc_display_contents_1_t* list, int dpy,
         ALOGD_IF(HWC_UTILS_DEBUG, "%s: time taken for MSMFB_BUFFER_SYNC IOCTL = %d",
                             __FUNCTION__, (size_t) ns2ms(systemTime() - start));
     }
+
     if(ret < 0) {
         ALOGE("ioctl MSMFB_BUFFER_SYNC failed, err=%s",
                 strerror(errno));
     }
+
     for(uint32_t i = 0; i < list->numHwLayers; i++) {
         if(list->hwLayers[i].compositionType == HWC_OVERLAY ||
            list->hwLayers[i].compositionType == HWC_FRAMEBUFFER_TARGET) {
-            //Close the acquireFenceFds
-            if(list->hwLayers[i].acquireFenceFd >= 0) {
-                close(list->hwLayers[i].acquireFenceFd);
-                list->hwLayers[i].acquireFenceFd = -1;
-            }
-            if(fd >= 0) {
-                close(fd);
-                fd = -1;
-            }
             //Populate releaseFenceFds.
             if(UNLIKELY(swapzero))
                 list->hwLayers[i].releaseFenceFd = -1;
@@ -407,12 +474,21 @@ int hwc_sync(hwc_context_t *ctx, hwc_display_contents_1_t* list, int dpy,
                 list->hwLayers[i].releaseFenceFd = dup(releaseFd);
         }
     }
+
+    if(fd >= 0) {
+        close(fd);
+        fd = -1;
+    }
+
+    if (ctx->mCopyBit[dpy])
+        ctx->mCopyBit[dpy]->setReleaseFd(releaseFd);
     if(UNLIKELY(swapzero)){
         list->retireFenceFd = -1;
         close(releaseFd);
     } else {
         list->retireFenceFd = releaseFd;
     }
+
     return ret;
 }
 
