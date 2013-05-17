@@ -27,13 +27,10 @@
 
 #define DEFAULT_IDLE_TIME 2000
 #define MAX_PIPES_PER_MIXER 4
-<<<<<<< HEAD
-=======
 
 namespace overlay {
     class Rotator;
 };
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 
 namespace qhwc {
 namespace ovutils = overlay::utils;
@@ -91,14 +88,7 @@ protected:
                 hwc_display_contents_1_t* list,FrameInfo& current_frame) = 0;
     /* configures MPD pipes */
     virtual int configure(hwc_context_t *ctx, hwc_layer_1_t *layer,
-<<<<<<< HEAD
-                        MdpPipeInfo* mdp_info) = 0;
-    /* Is rotation supported */
-    virtual bool canRotate(){ return true; };
-=======
                 PipeLayerPair& pipeLayerPair) = 0;
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
-
 
     /* set/reset flags for MDPComp */
     void setMDPCompLayerFlags(hwc_context_t *ctx,
@@ -109,32 +99,18 @@ protected:
     eState getState() { return mState; };
     /* reset state */
     void reset( hwc_context_t *ctx, hwc_display_contents_1_t* list );
-<<<<<<< HEAD
-    /* configure MDP flags for video buffers */
-    void setVidInfo(hwc_layer_1_t *layer, ovutils::eMdpFlags &mdpFlags);
-=======
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
     /* allocate MDP pipes from overlay */
     ovutils::eDest getMdpPipe(hwc_context_t *ctx, ePipeType type);
     /* checks for conditions where mdpcomp is not possible */
     bool isDoable(hwc_context_t *ctx, hwc_display_contents_1_t* list);
     /* sets up MDP comp for current frame */
     bool setup(hwc_context_t* ctx, hwc_display_contents_1_t* list);
-<<<<<<< HEAD
-    /* set up Border fill as Base pipe */
-    static bool setupBasePipe(hwc_context_t*);
-=======
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
     /* Is debug enabled */
     static bool isDebug() { return sDebugLogs ? true : false; };
     /* Is feature enabled */
     static bool isEnabled() { return sEnabled; };
     /* checks for mdp comp width limitation */
-<<<<<<< HEAD
-    bool isWidthValid(hwc_context_t *ctx, hwc_layer_1_t *layer);
-=======
     bool isValidDimension(hwc_context_t *ctx, hwc_layer_1_t *layer);
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 
     eState mState;
 
@@ -149,18 +125,6 @@ class MDPCompLowRes : public MDPComp {
 public:
      virtual ~MDPCompLowRes(){};
      virtual bool draw(hwc_context_t *ctx, hwc_display_contents_1_t *list);
-<<<<<<< HEAD
-
-private:
-    struct MdpPipeInfoLowRes : public MdpPipeInfo {
-        ovutils::eDest index;
-        virtual ~MdpPipeInfoLowRes() {};
-    };
-
-    /* configure's overlay pipes for the frame */
-    virtual int configure(hwc_context_t *ctx, hwc_layer_1_t *layer,
-                        MdpPipeInfo* mdp_info);
-=======
 
 private:
     struct MdpPipeInfoLowRes : public MdpPipeInfo {
@@ -171,7 +135,6 @@ private:
     /* configure's overlay pipes for the frame */
     virtual int configure(hwc_context_t *ctx, hwc_layer_1_t *layer,
             PipeLayerPair& pipeLayerPair);
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 
     /* allocates pipes to selected candidates */
     virtual bool allocLayerPipes(hwc_context_t *ctx,
@@ -179,11 +142,7 @@ private:
             FrameInfo& current_frame);
 
     virtual int pipesNeeded(hwc_context_t *ctx,
-<<<<<<< HEAD
-                        hwc_display_contents_1_t* list);
-=======
             hwc_display_contents_1_t* list);
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 };
 
 class MDPCompHighRes : public MDPComp {
@@ -202,11 +161,7 @@ private:
 
     /* configure's overlay pipes for the frame */
     virtual int configure(hwc_context_t *ctx, hwc_layer_1_t *layer,
-<<<<<<< HEAD
-                        MdpPipeInfo* mdp_info);
-=======
             PipeLayerPair& pipeLayerPair);
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 
     /* allocates pipes to selected candidates */
     virtual bool allocLayerPipes(hwc_context_t *ctx,
@@ -214,10 +169,7 @@ private:
             FrameInfo& current_frame);
 
     virtual int pipesNeeded(hwc_context_t *ctx, hwc_display_contents_1_t* list);
-<<<<<<< HEAD
-    virtual bool canRotate(){ return false; };
-=======
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
+
 };
 }; //namespace
 #endif

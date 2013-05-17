@@ -133,11 +133,7 @@ status_t BnQService::onTransact(
         } break;
         case SCREEN_REFRESH: {
             CHECK_INTERFACE(IQService, data, reply);
-<<<<<<< HEAD
-            if(callerUid != AID_GRAPHICS) {
-=======
             if(callerUid != AID_SYSTEM) {
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
                 ALOGE("display.qservice SCREEN_REFRESH access denied: \
                       pid=%d uid=%d process=%s",callerPid,
                       callerUid, callingProcName);

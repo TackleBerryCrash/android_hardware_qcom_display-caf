@@ -22,16 +22,11 @@
 #include <overlay.h>
 #include "hwc_video.h"
 #include "hwc_utils.h"
-<<<<<<< HEAD
-#include "mdp_version.h"
-#include "qdMetaData.h"
-=======
 #include "qdMetaData.h"
 #include "mdp_version.h"
 #include <overlayRotator.h>
 
 using overlay::Rotator;
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 
 namespace qhwc {
 
@@ -53,22 +48,12 @@ VideoOverlayLowRes::VideoOverlayLowRes(const int& dpy): IVideoOverlay(dpy) {}
 bool VideoOverlayLowRes::prepare(hwc_context_t *ctx,
         hwc_display_contents_1_t *list) {
 
-<<<<<<< HEAD
-    if(ctx->listStats[dpy].yuvCount > 1)
-        return false;
-
-    int yuvIndex =  ctx->listStats[dpy].yuvIndices[0];
-    sIsModeOn[dpy] = false;
-
-    int hw_w = ctx->dpyAttr[dpy].xres;
-=======
     if(ctx->listStats[mDpy].yuvCount > 1)
         return false;
 
     int yuvIndex =  ctx->listStats[mDpy].yuvIndices[0];
     int hw_w = ctx->dpyAttr[mDpy].xres;
     mModeOn = false;
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 
     if(hw_w > MAX_DISPLAY_DIM) {
        ALOGD_IF(VIDEO_DEBUG,"%s, \
@@ -165,31 +150,6 @@ bool VideoOverlayLowRes::draw(hwc_context_t *ctx,
         return true;
     }
 
-<<<<<<< HEAD
-#ifdef QCOM_BSP
-    MetaData_t *metadata = (MetaData_t *)hnd->base_metadata;
-    if ((metadata->operation & PP_PARAM_INTERLACED) && metadata->interlaced) {
-        ovutils::setMdpFlags(mdpFlags, ovutils::OV_MDP_DEINTERLACE);
-    }
-#endif
-
-    ovutils::eIsFg isFgFlag = ovutils::IS_FG_OFF;
-    if (ctx->listStats[dpy].numAppLayers == 1) {
-        isFgFlag = ovutils::IS_FG_SET;
-    }
-
-    ovutils::eRotFlags rotFlags = ovutils::ROT_FLAGS_NONE;
-    if(ctx->mMDP.version >= qdutils::MDP_V4_2 &&
-                ctx->mMDP.version < qdutils::MDSS_V5) {
-        rotFlags = ovutils::ROT_DOWNSCALE_ENABLED;
-    }
-
-    ovutils::PipeArgs parg(mdpFlags,
-            info,
-            ovutils::ZORDER_1,
-            isFgFlag,
-            rotFlags);
-=======
     int yuvIndex = ctx->listStats[mDpy].yuvIndices[0];
     if(yuvIndex == -1) {
         return true;
@@ -197,7 +157,6 @@ bool VideoOverlayLowRes::draw(hwc_context_t *ctx,
 
     private_handle_t *hnd = (private_handle_t *)
             list->hwLayers[yuvIndex].handle;
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 
     overlay::Overlay& ov = *(ctx->mOverlay);
     int fd = hnd->fd;
@@ -223,17 +182,7 @@ bool VideoOverlayLowRes::isModeOn() {
     return mModeOn;
 }
 
-<<<<<<< HEAD
-    if( displayFrame.left < 0 ||
-            displayFrame.top < 0 ||
-            displayFrame.right > fbWidth ||
-            displayFrame.bottom > fbHeight) {
-        hwc_rect_t scissor = {0, 0, fbWidth, fbHeight};
-        calculate_crop_rects(sourceCrop, displayFrame, scissor, transform);
-    }
-=======
 //===========VideoOverlayHighRes=========================
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 
 VideoOverlayHighRes::VideoOverlayHighRes(const int& dpy): IVideoOverlay(dpy) {}
 
@@ -241,22 +190,9 @@ VideoOverlayHighRes::VideoOverlayHighRes(const int& dpy): IVideoOverlay(dpy) {}
 bool VideoOverlayHighRes::prepare(hwc_context_t *ctx,
         hwc_display_contents_1_t *list) {
 
-<<<<<<< HEAD
-    // position x,y,w,h
-    ovutils::Dim dpos(displayFrame.left,
-            displayFrame.top,
-            displayFrame.right - displayFrame.left,
-            displayFrame.bottom - displayFrame.top);
-    // Calculate the actionsafe dimensions for External(dpy = 1 or 2)
-    if(dpy)
-        getActionSafePosition(ctx, dpy, dpos.x, dpos.y, dpos.w, dpos.h);
-
-    ov.setPosition(dpos, dest);
-=======
     int yuvIndex =  ctx->listStats[mDpy].yuvIndices[0];
     int hw_w = ctx->dpyAttr[mDpy].xres;
     mModeOn = false;
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 
     if(!ctx->mMDP.hasOverlay) {
        ALOGD_IF(VIDEO_DEBUG,"%s, this hw doesnt support overlay", __FUNCTION__);
@@ -330,11 +266,7 @@ bool VideoOverlayHighRes::draw(hwc_context_t *ctx,
         return true;
     }
 
-<<<<<<< HEAD
-    int yuvIndex = ctx->listStats[dpy].yuvIndices[0];
-=======
     int yuvIndex = ctx->listStats[mDpy].yuvIndices[0];
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
     if(yuvIndex == -1) {
         return true;
     }

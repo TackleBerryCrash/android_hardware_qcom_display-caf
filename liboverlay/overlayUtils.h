@@ -46,12 +46,8 @@
 #include <mdp_version.h>
 #include "gralloc_priv.h" //for interlace
 
-<<<<<<< HEAD
-#ifndef MDP_Y_CBCR_H2V2_VENUS
-=======
 // Older platforms do not support Venus.
 #ifndef VENUS_COLOR_FORMAT
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 #define MDP_Y_CBCR_H2V2_VENUS (MDP_IMGTYPE_LIMIT2 + 1)
 #endif
 
@@ -82,12 +78,9 @@
 #define MDP_OV_PIPE_FORCE_DMA 0x4000
 #endif
 
-<<<<<<< HEAD
-=======
 #define FB_DEVICE_TEMPLATE "/dev/graphics/fb%u"
 #define NUM_FB_DEVICES 3
 
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 namespace overlay {
 
 // fwd
@@ -233,10 +226,7 @@ enum { MAX_PATH_LEN = 256 };
     //driver. If downscale optimizatation is required,
     //then rotator will be used even if its 0 rotation case.
     ROT_DOWNSCALE_ENABLED = 1 << 1,
-<<<<<<< HEAD
-=======
     ROT_PREROTATED = 1 << 2,
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 };
 
 enum eRotDownscale {
@@ -292,16 +282,6 @@ enum eMdpPipeType {
 // Identify destination pipes
 // TODO Names useless, replace with int and change all interfaces
 enum eDest {
-<<<<<<< HEAD
-    OV_VG0 = 0,
-    OV_RGB0,
-    OV_VG1,
-    OV_RGB1,
-    OV_VG2,
-    OV_RGB2,
-    OV_DMA0,
-    OV_DMA1,
-=======
     OV_P0 = 0,
     OV_P1,
     OV_P2,
@@ -312,7 +292,6 @@ enum eDest {
     OV_P7,
     OV_P8,
     OV_P9,
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
     OV_INVALID,
     OV_MAX = OV_INVALID,
 };
@@ -410,11 +389,8 @@ struct ScreenInfo {
 
 int getMdpFormat(int format);
 int getHALFormat(int mdpFormat);
-<<<<<<< HEAD
-=======
 int getDownscaleFactor(const int& src_w, const int& src_h,
         const int& dst_w, const int& dst_h);
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 
 /* flip is upside down and such. V, H flip
  * rotation is 90, 180 etc
@@ -423,13 +399,6 @@ int getMdpOrient(eTransform rotation);
 int getOverlayMagnificationLimit();
 const char* getFormatString(int format);
 
-<<<<<<< HEAD
-enum {
-    HW_OV_MINIFICATION_LIMIT  = 8
-};
-
-=======
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 template <class T>
 inline void memset0(T& t) { ::memset(&t, 0, sizeof(T)); }
 
@@ -592,15 +561,6 @@ inline int getMdpOrient(eTransform rotation) {
     return -1;
 }
 
-<<<<<<< HEAD
-inline uint32_t getColorFormat(uint32_t format)
-{
-    return (format == HAL_PIXEL_FORMAT_YV12) ?
-            format : colorFormat(format);
-}
-
-=======
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 // FB0
 template <int CHAN>
 inline Dim getPositionS3DImpl(const Whf& whf)
@@ -730,54 +690,7 @@ inline void even_floor(T& value) {
         value--;
 }
 
-<<<<<<< HEAD
-inline const char* getDestStr(eDest dest) {
-    switch(dest) {
-        case OV_VG0: return "VG0";
-        case OV_RGB0: return "RGB0";
-        case OV_VG1: return "VG1";
-        case OV_RGB1: return "RGB1";
-        case OV_VG2: return "VG2";
-        case OV_RGB2: return "RGB2";
-        case OV_DMA0: return "DMA0";
-        case OV_DMA1: return "DMA1";
-        default: return "Invalid";
-    }
-    return "Invalid";
-}
-
-inline eMdpPipeType getPipeType(eDest dest) {
-    switch(dest) {
-        case OV_VG0:
-        case OV_VG1:
-        case OV_VG2:
-            return OV_MDP_PIPE_VG;
-        case OV_RGB0:
-        case OV_RGB1:
-        case OV_RGB2:
-            return OV_MDP_PIPE_RGB;
-        case OV_DMA0:
-        case OV_DMA1:
-            return OV_MDP_PIPE_DMA;
-        default:
-            return OV_MDP_PIPE_ANY;
-    }
-    return OV_MDP_PIPE_ANY;
-}
-=======
 void preRotateSource(const eTransform& tr, Whf& whf, Dim& srcCrop);
-void getDump(char *buf, size_t len, const char *prefix, const mdp_overlay& ov);
-void getDump(char *buf, size_t len, const char *prefix, const msmfb_img& ov);
-void getDump(char *buf, size_t len, const char *prefix, const mdp_rect& ov);
-void getDump(char *buf, size_t len, const char *prefix,
-        const msmfb_overlay_data& ov);
-void getDump(char *buf, size_t len, const char *prefix, const msmfb_data& ov);
-void getDump(char *buf, size_t len, const char *prefix,
-        const msm_rotator_img_info& ov);
-void getDump(char *buf, size_t len, const char *prefix,
-        const msm_rotator_data_info& ov);
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
-
 void getDump(char *buf, size_t len, const char *prefix, const mdp_overlay& ov);
 void getDump(char *buf, size_t len, const char *prefix, const msmfb_img& ov);
 void getDump(char *buf, size_t len, const char *prefix, const mdp_rect& ov);

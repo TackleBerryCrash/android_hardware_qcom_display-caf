@@ -1,10 +1,6 @@
 /*
  * Copyright (C) 2008 The Android Open Source Project
-<<<<<<< HEAD
- * Copyright (c) 2011-2012, The Linux Foundation. All rights reserved.
-=======
  * Copyright (c) 2011-2013, The Linux Foundation. All rights reserved.
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -182,11 +178,7 @@ struct private_handle_t : public native_handle {
 #ifndef QCOM_BSP
         // genlock handle to be dup'd by the binder
         int     genlockHandle;
-<<<<<<< HEAD
-#ifdef QCOM_BSP
-=======
 #else
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
         int     fd_metadata;          // fd for the meta-data
 #endif
         // ints
@@ -215,11 +207,7 @@ struct private_handle_t : public native_handle {
 #ifndef QCOM_BSP
         // local fd of the genlock device.
         int     genlockPrivFd;
-<<<<<<< HEAD
-#ifdef QCOM_BSP
-=======
 #else
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
         int     base_metadata;
 #endif
 
@@ -236,21 +224,6 @@ struct private_handle_t : public native_handle {
         private_handle_t(int fd, int size, int flags, int bufferType,
                          int format,int width, int height, int eFd = -1,
                          int eOffset = 0, int eBase = 0) :
-<<<<<<< HEAD
-            fd(fd), genlockHandle(-1),
-#ifdef QCOM_BSP
-            fd_metadata(eFd),
-#endif
-            magic(sMagic),  flags(flags), size(size), offset(0),
-            bufferType(bufferType), base(0),
-#ifdef QCOM_BSP
-            offset_metadata(eOffset),
-#endif
-            gpuaddr(0), pid(getpid()),
-            format(format), width(width), height(height), genlockPrivFd(-1)
-#ifdef QCOM_BSP
-            ,base_metadata(eBase)
-=======
             fd(fd),
 #ifndef QCOM_BSP
             genlockHandle(-1),
@@ -278,7 +251,6 @@ struct private_handle_t : public native_handle {
             genlockPrivFd(-1)
 #else
             base_metadata(eBase)
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 #endif
         {
             version = sizeof(native_handle);

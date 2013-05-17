@@ -152,39 +152,14 @@ int ExternalDisplay::teardownWFDDisplay() {
 
 int ExternalDisplay::ignoreRequest(const char *str) {
     const char *s1 = str + strlen("change@/devices/virtual/switch/");
-<<<<<<< HEAD
-    if(!strncmp(s1,"hdmi",strlen(s1))) {
-        // hdmi online event..!
-        configureHDMIDisplay();
-        // set system property
-        property_set("hw.hdmiON", "1");
-    }else if(!strncmp(s1,"wfd",strlen(s1))) {
-        // wfd online event..!
-        configureWFDDisplay();
-=======
     if(!strncmp(s1,"wfd",strlen(s1))) {
         if(mConnectedFbNum == mHdmiFbNum) {
             ALOGE("Ignore wfd event when HDMI is active");
             return true;
         }
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
     }
     return false;
 }
-
-<<<<<<< HEAD
-void ExternalDisplay::processUEventOffline(const char *str) {
-    const char *s1 = str + strlen("change@/devices/virtual/switch/");
-    if(!strncmp(s1,"hdmi",strlen(s1))) {
-        teardownHDMIDisplay();
-        // unset system property
-        property_set("hw.hdmiON", "0");
-    }else if(!strncmp(s1,"wfd",strlen(s1))) {
-        teardownWFDDisplay();
-    }
-}
-=======
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 
 ExternalDisplay::ExternalDisplay(hwc_context_t* ctx):mFd(-1),
     mCurrentMode(-1), mConnected(0), mConnectedFbNum(0), mModeCount(0),
@@ -194,9 +169,7 @@ ExternalDisplay::ExternalDisplay(hwc_context_t* ctx):mFd(-1),
     memset(&mVInfo, 0, sizeof(mVInfo));
     //Determine the fb index for external display devices.
     updateExtDispDevFbIndex();
-<<<<<<< HEAD
 
-=======
     // disable HPD at start, it will be enabled later
     // when the display powers on
     // This helps for framework reboot or adb shell stop/start
@@ -250,7 +223,6 @@ void ExternalDisplay::setSPDInfo(const char* node, const char* property) {
         }
         close(spdFile);
     }
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 }
 
 void ExternalDisplay::setEDIDMode(int resMode) {
@@ -274,15 +246,9 @@ void ExternalDisplay::setActionSafeDimension(int w, int h) {
     Mutex::Autolock lock(mExtDispLock);
     char actionsafeWidth[PROPERTY_VALUE_MAX];
     char actionsafeHeight[PROPERTY_VALUE_MAX];
-<<<<<<< HEAD
-    sprintf(actionsafeWidth, "%d", w);
-    property_set("hw.actionsafe.width", actionsafeWidth);
-    sprintf(actionsafeHeight, "%d", h);
-=======
     snprintf(actionsafeWidth, sizeof(actionsafeWidth), "%d", w);
     property_set("hw.actionsafe.width", actionsafeWidth);
     snprintf(actionsafeHeight, sizeof(actionsafeHeight), "%d", h);
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
     property_set("hw.actionsafe.height", actionsafeHeight);
     setExternalDisplay(true, mHdmiFbNum);
 }
@@ -301,78 +267,6 @@ void ExternalDisplay::getEDIDModes(int *out) const {
 }
 
 void ExternalDisplay::readCEUnderscanInfo()
-<<<<<<< HEAD
-{
-    int hdmiScanInfoFile = -1;
-    int len = -1;
-    char scanInfo[17];
-    char *ce_info_str = NULL;
-    const char token[] = ", \n";
-    int ce_info = -1;
-    char sysFsScanInfoFilePath[128];
-    sprintf(sysFsScanInfoFilePath, "/sys/devices/virtual/graphics/fb%d/"
-                                   "scan_info", mHdmiFbNum);
-
-    memset(scanInfo, 0, sizeof(scanInfo));
-    hdmiScanInfoFile = open(sysFsScanInfoFilePath, O_RDONLY, 0);
-    if (hdmiScanInfoFile < 0) {
-        ALOGD_IF(DEBUG, "%s: scan_info file '%s' not found",
-                                __FUNCTION__, sysFsScanInfoFilePath);
-        return;
-    } else {
-        len = read(hdmiScanInfoFile, scanInfo, sizeof(scanInfo)-1);
-        ALOGD("%s: Scan Info string: %s length = %d",
-                 __FUNCTION__, scanInfo, len);
-        if (len <= 0) {
-            close(hdmiScanInfoFile);
-            ALOGE("%s: Scan Info file empty '%s'",
-                                __FUNCTION__, sysFsScanInfoFilePath);
-            return;
-        }
-        scanInfo[len] = '\0';  /* null terminate the string */
-    }
-    close(hdmiScanInfoFile);
-
-    /*
-     * The scan_info contains the three fields
-     * PT - preferred video format
-     * IT - video format
-     * CE video format - containing the underscan support information
-     */
-
-    /* PT */
-    ce_info_str = strtok(scanInfo, token);
-    if (ce_info_str) {
-        /* IT */
-        ce_info_str = strtok(NULL, token);
-        if (ce_info_str) {
-            /* CE */
-            ce_info_str = strtok(NULL, token);
-            if (ce_info_str)
-                ce_info = atoi(ce_info_str);
-        }
-    }
-
-    if (ce_info_str) {
-        // ce_info contains the underscan information
-        if (ce_info == EXT_SCAN_ALWAYS_UNDERSCANED ||
-            ce_info == EXT_SCAN_BOTH_SUPPORTED)
-            // if TV supported underscan, then driver will always underscan
-            // hence no need to apply action safe rectangle
-            mUnderscanSupported = true;
-    } else {
-        ALOGE("%s: scan_info string error", __FUNCTION__);
-    }
-
-    // Store underscan support info in a system property
-    const char* prop = (mUnderscanSupported) ? "1" : "0";
-    property_set("hw.underscan_supported", prop);
-    return;
-}
-
-ExternalDisplay::~ExternalDisplay()
-=======
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 {
     int hdmiScanInfoFile = -1;
     int len = -1;
@@ -458,12 +352,8 @@ void setDisplayTiming(struct fb_var_screeninfo &info,
     info.reserved[1] = 0;
     info.reserved[2] = 0;
 #ifndef FB_METADATA_VIDEO_INFO_CODE_SUPPORT
-<<<<<<< HEAD
-    info.reserved[3] = (info.reserved[3] & 0xFFFF) | (video_format << 16);
-=======
     info.reserved[3] = (info.reserved[3] & 0xFFFF) |
               (mode->video_format << 16);
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 #endif
     info.xoffset = 0;
     info.yoffset = 0;
@@ -585,11 +475,7 @@ void ExternalDisplay::resetInfo()
 int ExternalDisplay::getModeOrder(int mode)
 {
     // XXX: We dont support interlaced modes but having
-<<<<<<< HEAD
-    // it here for for future
-=======
     // it here for future
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
     switch (mode) {
         default:
         case HDMI_VFRMT_1440x480i60_4_3:
@@ -688,19 +574,11 @@ inline bool ExternalDisplay::isValidMode(int ID)
 bool ExternalDisplay::isInterlacedMode(int ID) {
     bool interlaced = false;
     switch(ID) {
-<<<<<<< HEAD
-        case m1440x480i60_4_3:
-        case m1440x480i60_16_9:
-        case m1440x576i50_4_3:
-        case m1440x576i50_16_9:
-        case m1920x1080i60_16_9:
-=======
         case HDMI_VFRMT_1440x480i60_4_3:
         case HDMI_VFRMT_1440x480i60_16_9:
         case HDMI_VFRMT_1440x576i50_4_3:
         case HDMI_VFRMT_1440x576i50_16_9:
         case HDMI_VFRMT_1920x1080i60_16_9:
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
             interlaced = true;
         default:
             interlaced = false;
@@ -812,28 +690,6 @@ bool ExternalDisplay::writeHPDOption(int userOption) const
     return ret;
 }
 
-<<<<<<< HEAD
-/*
- * commits the changes to the external display
- */
-bool ExternalDisplay::post()
-{
-    if(mFd == -1)
-        return false;
-
-    struct mdp_display_commit ext_commit;
-    memset(&ext_commit, 0, sizeof(struct mdp_display_commit));
-    ext_commit.flags = MDP_DISPLAY_COMMIT_OVERLAY;
-    if (ioctl(mFd, MSMFB_DISPLAY_COMMIT, &ext_commit) == -1) {
-        ALOGE("%s: MSMFB_DISPLAY_COMMIT for external failed, str: %s",
-                __FUNCTION__, strerror(errno));
-        return false;
-    }
-    return true;
-}
-
-=======
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 void ExternalDisplay::setDpyWfdAttr() {
     if(mHwcContext) {
         mHwcContext->dpyAttr[mExtDpyNum].xres = mVInfo.xres;

@@ -48,12 +48,8 @@ public:
     void setExternalDisplay(bool connected, int extFbNum = 0);
     bool isExternalConnected() { return mConnected;};
     void  setExtDpyNum(int extDpyNum) { mExtDpyNum = extDpyNum;};
-<<<<<<< HEAD
-    bool post();
-=======
     int  getExternalType() {return mConnectedFbNum;};
     bool isWFDActive() {return (mConnectedFbNum == mWfdFbNum);};
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
     void setHPD(uint32_t startEnd);
     void setEDIDMode(int resMode);
     void setActionSafeDimension(int w, int h);
@@ -64,10 +60,7 @@ public:
     int  teardownWFDDisplay();
 
 private:
-<<<<<<< HEAD
-=======
     void setSPDInfo(const char* node, const char* property);
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
     void readCEUnderscanInfo();
     bool readResolution();
     int  parseResolution(char* edidStr, int* edidModes);
@@ -103,11 +96,8 @@ private:
     int mHdmiFbNum;
     int mWfdFbNum;
     int mExtDpyNum;
-<<<<<<< HEAD
-=======
     // Holds all the HDMI modes and timing info supported by driver
     msm_hdmi_mode_timing_info* supported_video_mode_lut;
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 };
 
 }; //qhwc

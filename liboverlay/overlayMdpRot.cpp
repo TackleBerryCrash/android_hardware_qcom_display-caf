@@ -31,15 +31,7 @@ MdpRot::MdpRot() {
 
 MdpRot::~MdpRot() { close(); }
 
-<<<<<<< HEAD
-inline void MdpRot::setEnable() { mRotImgInfo.enable = 1; }
-
-inline void MdpRot::setDisable() { mRotImgInfo.enable = 0; }
-
-inline bool MdpRot::enabled() const { return mRotImgInfo.enable; }
-=======
 bool MdpRot::enabled() const { return mRotImgInfo.enable; }
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 
 inline void MdpRot::setRotations(uint32_t r) { mRotImgInfo.rotations = r; }
 
@@ -51,16 +43,6 @@ inline uint32_t MdpRot::getDstOffset() const {
     return mRotDataInfo.dst.offset;
 }
 
-<<<<<<< HEAD
-inline uint32_t MdpRot::getDstFormat() const {
-    return mRotImgInfo.dst.format;
-}
-
-inline uint32_t MdpRot::getSessId() const { return mRotImgInfo.session_id; }
-
-inline void MdpRot::setSrcFB() {
-    mRotDataInfo.src.flags |= MDP_MEMORY_ID_TYPE_FB;
-=======
 uint32_t MdpRot::getDstFormat() const {
     return mRotImgInfo.dst.format;
 }
@@ -74,7 +56,6 @@ void MdpRot::setDownscale(int ds) {
         mRotImgInfo.src_rect.h = utils::aligndown(mRotImgInfo.src_rect.h, 16);
     }
     mRotImgInfo.downscale_ratio = ds;
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 }
 
 void MdpRot::setDownscale(int ds) {
@@ -130,11 +111,7 @@ inline void MdpRot::setFlags(const utils::eMdpFlags& flags) {
         mRotImgInfo.secure = 1;
 }
 
-<<<<<<< HEAD
-inline void MdpRot::setTransform(const utils::eTransform& rot)
-=======
 void MdpRot::setTransform(const utils::eTransform& rot)
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 {
     int r = utils::getMdpOrient(rot);
     setRotations(r);
@@ -142,16 +119,6 @@ void MdpRot::setTransform(const utils::eTransform& rot)
     //Clients in Android dont factor in 90 rotation while deciding the flip.
     mOrientation = static_cast<utils::eTransform>(r);
     ALOGE_IF(DEBUG_OVERLAY, "%s: r=%d", __FUNCTION__, r);
-<<<<<<< HEAD
-}
-
-inline void MdpRot::setRotatorUsed(const bool& rotUsed) {
-    setDisable();
-    if(rotUsed) {
-        setEnable();
-    }
-=======
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 }
 
 inline void MdpRot::doTransform() {

@@ -33,13 +33,7 @@
 #define ALIGN_TO(x, align)     (((x) + ((align)-1)) & ~((align)-1))
 #define LIKELY( exp )       (__builtin_expect( (exp) != 0, true  ))
 #define UNLIKELY( exp )     (__builtin_expect( (exp) != 0, false ))
-<<<<<<< HEAD
-#define FINAL_TRANSFORM_MASK 0x000F
-#define MAX_NUM_DISPLAYS 4 //Yes, this is ambitious
-#define MAX_NUM_LAYERS 32
-=======
 #define MAX_NUM_LAYERS 32 //includes fb layer
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 #define MAX_DISPLAY_DIM 2048
 
 // For support of virtual displays
@@ -49,11 +43,8 @@
 //Fwrd decls
 struct hwc_context_t;
 
-<<<<<<< HEAD
-=======
 namespace ovutils = overlay::utils;
 
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 namespace overlay {
 class Overlay;
 class Rotator;
@@ -65,10 +56,7 @@ namespace qhwc {
 class QueuedBufferStore;
 class ExternalDisplay;
 class IFBUpdate;
-<<<<<<< HEAD
-=======
 class IVideoOverlay;
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 class MDPComp;
 class CopyBit;
 
@@ -184,11 +172,8 @@ bool isSecuring(hwc_context_t* ctx);
 bool isSecureModePolicy(int mdpVersion);
 bool isExternalActive(hwc_context_t* ctx);
 bool needsScaling(hwc_layer_1_t const* layer);
-<<<<<<< HEAD
-=======
 bool isAlphaPresent(hwc_layer_1_t const* layer);
 bool setupBasePipe(hwc_context_t *ctx);
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 int hwc_vsync_control(hwc_context_t* ctx, int dpy, int enable);
 
 //Helper function to dump logs
@@ -203,9 +188,6 @@ void closeAcquireFds(hwc_display_contents_1_t* list);
 
 //Sync point impl.
 int hwc_sync(hwc_context_t *ctx, hwc_display_contents_1_t* list, int dpy,
-<<<<<<< HEAD
-                                                    int fd);
-=======
         int fd);
 
 //Trims a layer's source crop which is outside of screen boundary.
@@ -228,7 +210,6 @@ int configureHighRes(hwc_context_t *ctx, hwc_layer_1_t *layer, const int& dpy,
         ovutils::eMdpFlags& mdpFlags, const ovutils::eZorder& z,
         const ovutils::eIsFg& isFg, const ovutils::eDest& lDest,
         const ovutils::eDest& rDest, overlay::Rotator **rot);
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 
 // Inline utility functions
 static inline bool isSkipLayer(const hwc_layer_1_t* l) {
@@ -311,29 +292,18 @@ struct vsync_state {
 struct hwc_context_t {
     hwc_composer_device_1_t device;
     const hwc_procs_t* proc;
-<<<<<<< HEAD
-    //Framebuffer device
-    framebuffer_device_t *mFbDev;
-=======
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 
     //CopyBit objects
     qhwc::CopyBit *mCopyBit[MAX_DISPLAYS];
 
     //Overlay object - NULL for non overlay devices
     overlay::Overlay *mOverlay;
-<<<<<<< HEAD
-
-    //Primary and external FB updater
-    qhwc::IFBUpdate *mFBUpdate[MAX_DISPLAYS];
-=======
     //Holds a few rot objects
     overlay::RotMgr *mRotMgr;
 
     //Primary and external FB updater
     qhwc::IFBUpdate *mFBUpdate[MAX_DISPLAYS];
     qhwc::IVideoOverlay *mVidOv[MAX_DISPLAYS];
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
     // External display related information
     qhwc::ExternalDisplay *mExtDisplay;
     qhwc::MDPInfo mMDP;
@@ -342,10 +312,7 @@ struct hwc_context_t {
     qhwc::LayerCache *mLayerCache[MAX_DISPLAYS];
     qhwc::LayerProp *layerProp[MAX_DISPLAYS];
     qhwc::MDPComp *mMDPComp;
-<<<<<<< HEAD
-=======
     qhwc::LayerRotMap *mLayerRotMap[MAX_DISPLAYS];
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 
     //Securing in progress indicator
     bool mSecuring;
@@ -361,8 +328,6 @@ struct hwc_context_t {
     struct vsync_state vstate;
     //DMA used for rotator
     bool mDMAInUse;
-<<<<<<< HEAD
-=======
     //MDP rotater needed
     bool mNeedsRotator;
     //Check if base pipe is set up
@@ -377,7 +342,6 @@ static inline bool isSkipPresent (hwc_context_t *ctx, int dpy) {
 static inline bool isYuvPresent (hwc_context_t *ctx, int dpy) {
     return  ctx->listStats[dpy].yuvCount;
 }
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 };
 
 static inline bool isSkipPresent (hwc_context_t *ctx, int dpy) {

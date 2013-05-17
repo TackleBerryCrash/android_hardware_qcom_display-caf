@@ -41,15 +41,10 @@ using gralloc::IonAlloc;
 
 #define ION_DEVICE "/dev/ion"
 #ifdef QCOM_BSP
-<<<<<<< HEAD
-#define NEW_ION_API
-#endif
-=======
 #ifndef NEW_ION_API
 #define NEW_ION_API
 #endif
 #endif
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 
 int IonAlloc::open_device()
 {
@@ -265,9 +260,6 @@ int IonAlloc::clean_buffer(void *base, size_t size, int offset, int fd, int op)
 
 #ifdef NEW_ION_API
     struct ion_custom_data d;
-<<<<<<< HEAD
-    d.cmd = ION_IOC_CLEAN_INV_CACHES;
-=======
     switch(op) {
     case CACHE_CLEAN:
         d.cmd = ION_IOC_CLEAN_CACHES;
@@ -280,7 +272,6 @@ int IonAlloc::clean_buffer(void *base, size_t size, int offset, int fd, int op)
         d.cmd = ION_IOC_CLEAN_INV_CACHES;
     }
 
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
     d.arg = (unsigned long int)&flush_data;
 
     if(ioctl(mIonFd, ION_IOC_CUSTOM, &d)) {

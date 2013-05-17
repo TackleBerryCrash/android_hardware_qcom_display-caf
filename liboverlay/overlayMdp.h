@@ -111,55 +111,6 @@ private:
     /* restore last known good ov to be the current */
     void restore();
 
-<<<<<<< HEAD
-    /* Sets the source total width, height, format */
-    bool setSource(const utils::PipeArgs& pargs);
-
-    /*
-     * Sets ROI, the unpadded region, for source buffer.
-     * Should be called before a setPosition, for small clips.
-     * Dim - ROI dimensions.
-     */
-    bool setCrop(const utils::Dim& d);
-
-    bool setTransform(const utils::eTransform& orient);
-
-    /* set whether rotator can be used */
-    void setRotatorUsed(const bool& rotUsed);
-
-    /* given a dim and w/h, set overlay dim */
-    bool setPosition(const utils::Dim& dim, int w, int h);
-
-    /* using user_data, sets/unsets roationvalue in mdp flags */
-    void setRotationFlags();
-
-    /* Perform transformation calculations */
-    void doTransform();
-
-    /* Performs downscale calculations */
-    void doDownscale(int dscale_factor);
-
-    /* Get downscale factor */
-    int getDownscalefactor();
-
-    /* Update the src format */
-    void updateSrcformat(const uint32_t& inputsrcFormat);
-
-    /* dump state of the object */
-    void dump() const;
-
-    /* Return the dump in the specified buffer */
-    void getDump(char *buf, size_t len);
-
-private:
-
-    /* helper functions for overlayTransform */
-    void overlayTransFlipH();
-    void overlayTransFlipV();
-    void overlayTransRot90();
-
-=======
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
     utils::eTransform mOrientation; //Holds requested orientation
     /* last good known ov info */
     mdp_overlay   mLkgo;
@@ -220,10 +171,6 @@ public:
     bool play(int fd, uint32_t offset);
     /* dump state of the object */
     void dump() const;
-<<<<<<< HEAD
-
-=======
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
     /* Return the dump in the specified buffer */
     void getDump(char *buf, size_t len);
 

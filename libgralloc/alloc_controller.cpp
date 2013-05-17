@@ -30,11 +30,7 @@
 #include <cutils/log.h>
 #include <fcntl.h>
 #include <dlfcn.h>
-<<<<<<< HEAD
-#include "gralloc_priv.h"
-=======
 #include <gralloc_priv.h>
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 #include "alloc_controller.h"
 #include "memalloc.h"
 #include "ionalloc.h"
@@ -49,13 +45,10 @@
 #define VENUS_BUFFER_SIZE(args...) 0
 #endif
 
-<<<<<<< HEAD
-=======
 #ifndef ION_ADSP_HEAP_ID
 #define ION_ADSP_HEAP_ID ION_CAMERA_HEAP_ID
 #endif
 
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 using namespace gralloc;
 using namespace qdutils;
 

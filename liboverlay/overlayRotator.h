@@ -38,45 +38,6 @@
 
 namespace overlay {
 
-<<<<<<< HEAD
-class Rotator
-{
-public:
-    enum { TYPE_MDP, TYPE_MDSS };
-    virtual ~Rotator();
-    virtual bool init() = 0;
-    virtual bool close() = 0;
-    virtual void setSource(const utils::Whf& wfh) = 0;
-    virtual void setFlags(const utils::eMdpFlags& flags) = 0;
-    virtual void setTransform(const utils::eTransform& rot) = 0;
-    virtual void setRotatorUsed(const bool& rotUsed) = 0;
-    virtual bool commit() = 0;
-    virtual void setRotations(uint32_t r) = 0;
-    virtual void setSrcFB() = 0;
-    virtual void setDownscale(int ds) = 0;
-    virtual int getDstMemId() const = 0;
-    virtual uint32_t getDstOffset() const = 0;
-    virtual uint32_t getDstFormat() const = 0;
-    virtual void setEnable() = 0;
-    virtual void setDisable() = 0;
-    virtual bool enabled () const = 0;
-    virtual uint32_t getSessId() const = 0;
-    virtual bool queueBuffer(int fd, uint32_t offset) = 0;
-    virtual void dump() const = 0;
-    virtual void getDump(char *buf, size_t len) const = 0;
-    static Rotator *getRotator();
-
-protected:
-    explicit Rotator() {}
-    static uint32_t calcOutputBufSize(const utils::Whf& destWhf);
-
-private:
-    /*Returns rotator h/w type */
-    static int getRotatorHwType();
-};
-
-=======
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 /*
    Manages the case where new rotator memory needs to be
    allocated, before previous is freed, due to resolution change etc. If we make
@@ -158,24 +119,11 @@ public:
     virtual void setSource(const utils::Whf& wfh);
     virtual void setFlags(const utils::eMdpFlags& flags);
     virtual void setTransform(const utils::eTransform& rot);
-<<<<<<< HEAD
-    virtual void setRotatorUsed(const bool& rotUsed);
     virtual bool commit();
-    virtual void setRotations(uint32_t r);
-    virtual void setSrcFB();
-=======
-    virtual bool commit();
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
     virtual void setDownscale(int ds);
     virtual int getDstMemId() const;
     virtual uint32_t getDstOffset() const;
     virtual uint32_t getDstFormat() const;
-<<<<<<< HEAD
-    virtual void setEnable();
-    virtual void setDisable();
-    virtual bool enabled () const;
-=======
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
     virtual uint32_t getSessId() const;
     virtual bool queueBuffer(int fd, uint32_t offset);
     virtual void dump() const;
@@ -213,11 +161,6 @@ private:
     utils::eTransform mOrientation;
     /* rotator fd */
     OvFD mFd;
-<<<<<<< HEAD
-    /* Rotator memory manager */
-    RotMem mMem;
-=======
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 
     friend Rotator* Rotator::getRotator();
 };
@@ -232,24 +175,11 @@ public:
     virtual void setSource(const utils::Whf& wfh);
     virtual void setFlags(const utils::eMdpFlags& flags);
     virtual void setTransform(const utils::eTransform& rot);
-<<<<<<< HEAD
-    virtual void setRotatorUsed(const bool& rotUsed);
     virtual bool commit();
-    virtual void setRotations(uint32_t r);
-    virtual void setSrcFB();
-=======
-    virtual bool commit();
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
     virtual void setDownscale(int ds);
     virtual int getDstMemId() const;
     virtual uint32_t getDstOffset() const;
     virtual uint32_t getDstFormat() const;
-<<<<<<< HEAD
-    virtual void setEnable();
-    virtual void setDisable();
-    virtual bool enabled () const;
-=======
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
     virtual uint32_t getSessId() const;
     virtual bool queueBuffer(int fd, uint32_t offset);
     virtual void dump() const;
@@ -280,11 +210,6 @@ private:
     utils::eTransform mOrientation;
     /* rotator fd */
     OvFD mFd;
-<<<<<<< HEAD
-    /* Rotator memory manager */
-    RotMem mMem;
-=======
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
     /* Enable/Disable Mdss Rot*/
     bool mEnabled;
 

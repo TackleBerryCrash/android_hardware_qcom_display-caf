@@ -115,12 +115,9 @@ private:
         static void resetAllocation(int index);
         static bool isAllocated(int index);
         static bool isNotAllocated(int index);
-<<<<<<< HEAD
-=======
 
         static utils::eMdpPipeType getPipeType(utils::eDest dest);
         static const char* getDestStr(utils::eDest dest);
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 
         static int NUM_PIPES;
         static utils::eMdpPipeType pipeTypeLUT[utils::OV_MAX];

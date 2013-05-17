@@ -90,44 +90,16 @@ void MdpCtrl::setCrop(const utils::Dim& d) {
     setSrcRectDim(d);
 }
 
-<<<<<<< HEAD
-bool MdpCtrl::setPosition(const overlay::utils::Dim& d,
-        int fbw, int fbh)
-{
-    ovutils::Dim dim(d);
-    ovutils::Dim ovsrcdim = getSrcRectDim();
-    // Scaling of upto a max of 20 times supported
-    if(dim.w >(ovsrcdim.w * ovutils::getOverlayMagnificationLimit())){
-        dim.w = ovutils::getOverlayMagnificationLimit() * ovsrcdim.w;
-        dim.x = (fbw - dim.w) / 2;
-    }
-    if(dim.h >(ovsrcdim.h * ovutils::getOverlayMagnificationLimit())) {
-        dim.h = ovutils::getOverlayMagnificationLimit() * ovsrcdim.h;
-        dim.y = (fbh - dim.h) / 2;
-    }
-
-    setDstRectDim(dim);
-    return true;
-}
-
-bool MdpCtrl::setTransform(const utils::eTransform& orient) {
-=======
 void MdpCtrl::setPosition(const overlay::utils::Dim& d) {
     setDstRectDim(d);
 }
 
 void MdpCtrl::setTransform(const utils::eTransform& orient) {
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
     int rot = utils::getMdpOrient(orient);
     setUserData(rot);
     //getMdpOrient will switch the flips if the source is 90 rotated.
     //Clients in Android dont factor in 90 rotation while deciding the flip.
     mOrientation = static_cast<utils::eTransform>(rot);
-<<<<<<< HEAD
-
-    return true;
-=======
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 }
 
 void MdpCtrl::setRotatorUsed(const bool& rotUsed) {
@@ -198,11 +170,8 @@ void MdpCtrl::doDownscale(int dscale_factor) {
 
 bool MdpCtrl::set() {
     //deferred calcs, so APIs could be called in any order.
-<<<<<<< HEAD
-=======
     doTransform();
     doDownscale();
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
     utils::Whf whf = getSrcWhf();
     if(utils::isYuv(whf.format)) {
         normalizeCrop(mOVInfo.src_rect.x, mOVInfo.src_rect.w);
@@ -237,26 +206,11 @@ bool MdpCtrl::get() {
     return true;
 }
 
-<<<<<<< HEAD
-//Adjust width, height if rotator is used post transform calcs.
-//At this point the format is already updated by updateSrcFormat
-void MdpCtrl::adjustSrcWhf(const bool& rotUsed) {
-    if(rotUsed) {
-        utils::Whf whf = getSrcWhf();
-        if(whf.format == MDP_Y_CRCB_H2V2_TILE ||
-                whf.format == MDP_Y_CBCR_H2V2_TILE) {
-            whf.w = utils::alignup(whf.w, 64);
-            whf.h = utils::alignup(whf.h, 32);
-        }
-        setSrcWhf(whf);
-    }
-=======
 //Update src format based on rotator's destination format.
 void MdpCtrl::updateSrcFormat(const uint32_t& rotDestFmt) {
     utils::Whf whf = getSrcWhf();
     whf.format =  rotDestFmt;
     setSrcWhf(whf);
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 }
 
 //Update src format if rotator used based on rotator's destination format.

@@ -82,17 +82,6 @@ private:
     //Marks layer flags if this feature is used
     void markFlags(hwc_layer_1_t *yuvLayer);
     //Flags if this feature is on.
-<<<<<<< HEAD
-    static bool sIsModeOn[MAX_DISPLAYS];
-    static ovutils::eDest sDest[MAX_DISPLAYS];
-};
-
-inline void VideoOverlay::reset() {
-    for(uint32_t i = 0; i < MAX_DISPLAYS; i++) {
-        sIsModeOn[i] = false;
-        sDest[i] = ovutils::OV_INVALID;
-    }
-=======
     bool mModeOn;
     ovutils::eDest mDestL;
     ovutils::eDest mDestR;
@@ -103,7 +92,6 @@ inline void VideoOverlayLowRes::reset() {
     mModeOn = false;
     mDest = ovutils::OV_INVALID;
     mRot = NULL;
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 }
 
 inline void VideoOverlayHighRes::reset() {

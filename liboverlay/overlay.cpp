@@ -37,20 +37,6 @@ namespace overlay {
 using namespace utils;
 
 Overlay::Overlay() {
-<<<<<<< HEAD
-    int numPipes = 0;
-    char property[PROPERTY_VALUE_MAX];
-    int mdpVersion = qdutils::MDPVersion::getInstance().getMDPVersion();
-    if (mdpVersion > qdutils::MDP_V3_1) numPipes = 3;
-    if (mdpVersion >= qdutils::MDP_V4_2) numPipes = 4;
-    if (mdpVersion >= qdutils::MDSS_V5) numPipes = 8;
-
-    if (property_get("debug.mdpcomp.maxlayer", property, NULL) > 0) {
-        PipeBook::NUM_PIPES = atoi(property);
-    } else {
-        PipeBook::NUM_PIPES = numPipes;
-    }
-=======
     char property[PROPERTY_VALUE_MAX];
     if (property_get("debug.mdpcomp.maxlayer", property, NULL) > 0) {
         PipeBook::NUM_PIPES = atoi(property);
@@ -58,7 +44,6 @@ Overlay::Overlay() {
         PipeBook::NUM_PIPES = qdutils::MDPVersion::getInstance().getTotalPipes();
     }
 
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
     for(int i = 0; i < PipeBook::NUM_PIPES; i++) {
         mPipeBook[i].init();
     }
@@ -206,11 +191,7 @@ void Overlay::setSource(const utils::PipeArgs args,
         clearMdpFlags(newArgs.mdpFlags, OV_MDP_PIPE_SHARE);
     }
 
-<<<<<<< HEAD
-    if(dest == OV_DMA0 || dest == OV_DMA1) {
-=======
     if(PipeBook::getPipeType(dest) == OV_MDP_PIPE_DMA) {
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
         setMdpFlags(newArgs.mdpFlags, OV_MDP_PIPE_FORCE_DMA);
     } else {
         clearMdpFlags(newArgs.mdpFlags, OV_MDP_PIPE_FORCE_DMA);

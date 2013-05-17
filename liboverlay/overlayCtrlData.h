@@ -62,13 +62,7 @@ public:
     /* set crop info and pass it down to mdp */
     void setCrop(const utils::Dim& d);
     /* set orientation */
-<<<<<<< HEAD
-    bool setTransform(const utils::eTransform& p);
-    /* set whether rotator can be used */
-    void setRotatorUsed(const bool& rotUsed);
-=======
     void setTransform(const utils::eTransform& p);
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
     /* set mdp position using dim */
     void setPosition(const utils::Dim& dim);
     /* mdp set overlay/commit changes */
@@ -80,27 +74,11 @@ public:
     int  getFd() const;
     /* retrieve crop data */
     utils::Dim getCrop() const;
-<<<<<<< HEAD
-
-    /* Perform transformation calculations */
-    void doTransform();
-
-    /* Performs downscale calculations */
-    void doDownscale(int dscale_factor);
-
-    /* Get downscale factor */
-    int getDownscalefactor();
-
-    /* Update the src format */
-    void updateSrcformat(const uint32_t& inputsrcFormat);
-
-=======
     utils::Dim getPosition() const;
     /* Set downscale */
     void setDownscale(int dscale_factor);
     /* Update the src format based on rotator's dest */
     void updateSrcFormat(const uint32_t& rotDstFormat);
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
     /* dump the state of the object */
     void dump() const;
     /* Return the dump in the specified buffer */
@@ -221,42 +199,20 @@ inline int Ctrl::getFd() const {
     return mMdp.getFd();
 }
 
-<<<<<<< HEAD
-inline void Ctrl::updateSrcformat(const uint32_t& inputsrcFormat) {
-    mMdp.updateSrcformat(inputsrcFormat);
-}
-
-inline utils::ScreenInfo Ctrl::getScreenInfo() const {
-    return mInfo;
-=======
 inline void Ctrl::updateSrcFormat(const uint32_t& rotDstFmt) {
     mMdp.updateSrcFormat(rotDstFmt);
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 }
 
 inline utils::Dim Ctrl::getCrop() const {
     return mMdp.getSrcRectDim();
 }
 
-<<<<<<< HEAD
-inline void Ctrl::doTransform() {
-    return mMdp.doTransform();
-}
-
-inline void Ctrl::doDownscale(int dscale_factor) {
-    mMdp.doDownscale(dscale_factor);
-}
-
-inline int Ctrl::getDownscalefactor() {
-    return mMdp.getDownscalefactor();
-=======
 inline utils::Dim Ctrl::getPosition() const {
     return mMdp.getDstRectDim();
 }
 
 inline void Ctrl::setDownscale(int dscale_factor) {
     mMdp.setDownscale(dscale_factor);
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 }
 
 inline void Ctrl::getDump(char *buf, size_t len) {

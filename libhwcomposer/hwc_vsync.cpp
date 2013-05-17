@@ -100,10 +100,6 @@ static void *vsync_loop(void *param)
         pthread_mutex_unlock(&ctx->vstate.lock);
 
         if (!ctx->vstate.fakevsync) {
-<<<<<<< HEAD
-            for(int i = 0; i < MAX_RETRY_COUNT; i++) {
-                len = pread(fd_timestamp, vdata, MAX_DATA, 0);
-=======
             nsecs_t vsync_start_time = systemTime();
             for(int i = 0; i < MAX_RETRY_COUNT; i++) {
                 len = pread(fd_timestamp, vdata, MAX_DATA, 0);
@@ -114,7 +110,6 @@ static void *vsync_loop(void *param)
                                             "Excessive delay reading vsync: took %lld ms",
                                             ns2ms(time_taken));
                 }
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
                 if(len < 0 && (errno == EAGAIN ||
                                errno == EINTR  ||
                                errno == EBUSY)) {
@@ -149,17 +144,11 @@ static void *vsync_loop(void *param)
             cur_timestamp = systemTime();
         }
         // send timestamp to HAL
-<<<<<<< HEAD
-        ALOGD_IF (logvsync, "%s: timestamp %llu sent to HWC for %s",
-                  __FUNCTION__, cur_timestamp, "fb0");
-        ctx->proc->vsync(ctx->proc, dpy, cur_timestamp);
-=======
         if(ctx->vstate.enable) {
             ALOGD_IF (logvsync, "%s: timestamp %llu sent to HWC for %s",
                       __FUNCTION__, cur_timestamp, "fb0");
             ctx->proc->vsync(ctx->proc, dpy, cur_timestamp);
         }
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 
     } while (true);
     if(fd_timestamp >= 0)

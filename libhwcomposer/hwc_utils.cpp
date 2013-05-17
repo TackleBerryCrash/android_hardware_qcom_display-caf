@@ -19,10 +19,7 @@
  */
 #define HWC_UTILS_DEBUG 0
 #include <sys/ioctl.h>
-<<<<<<< HEAD
-=======
 #include <linux/fb.h>
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 #include <binder/IServiceManager.h>
 #include <EGL/egl.h>
 #include <cutils/properties.h>
@@ -32,10 +29,7 @@
 #include "hwc_utils.h"
 #include "hwc_mdpcomp.h"
 #include "hwc_fbupdate.h"
-<<<<<<< HEAD
-=======
 #include "hwc_video.h"
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 #include "mdp_version.h"
 #include "hwc_copybit.h"
 #include "external.h"
@@ -46,12 +40,9 @@
 using namespace qClient;
 using namespace qService;
 using namespace android;
-<<<<<<< HEAD
-=======
 using namespace overlay;
 using namespace overlay::utils;
 namespace ovutils = overlay::utils;
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 
 namespace qhwc {
 
@@ -124,13 +115,6 @@ static int openFramebufferDevice(hwc_context_t *ctx)
 void initContext(hwc_context_t *ctx)
 {
     openFramebufferDevice(ctx);
-<<<<<<< HEAD
-    overlay::Overlay::initOverlay();
-    ctx->mOverlay = overlay::Overlay::getInstance();
-    ctx->mMDP.version = qdutils::MDPVersion::getInstance().getMDPVersion();
-    ctx->mMDP.hasOverlay = qdutils::MDPVersion::getInstance().hasOverlay();
-    ctx->mMDP.panel = qdutils::MDPVersion::getInstance().getPanelType();
-=======
     ctx->mMDP.version = qdutils::MDPVersion::getInstance().getMDPVersion();
     ctx->mMDP.hasOverlay = qdutils::MDPVersion::getInstance().hasOverlay();
     ctx->mMDP.panel = qdutils::MDPVersion::getInstance().getPanelType();
@@ -138,7 +122,6 @@ void initContext(hwc_context_t *ctx)
     ctx->mOverlay = overlay::Overlay::getInstance();
     ctx->mRotMgr = new RotMgr();
 
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
     //Is created and destroyed only once for primary
     //For external it could get created and destroyed multiple times depending
     //on what external we connect to.
@@ -146,14 +129,10 @@ void initContext(hwc_context_t *ctx)
         IFBUpdate::getObject(ctx->dpyAttr[HWC_DISPLAY_PRIMARY].xres,
         HWC_DISPLAY_PRIMARY);
 
-<<<<<<< HEAD
-    char value[PROPERTY_VALUE_MAX];
-=======
     ctx->mVidOv[HWC_DISPLAY_PRIMARY] =
         IVideoOverlay::getObject(ctx->dpyAttr[HWC_DISPLAY_PRIMARY].xres,
         HWC_DISPLAY_PRIMARY);
 
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
     // Check if the target supports copybit compostion (dyn/mdp/c2d) to
     // decide if we need to open the copybit module.
     int compositionType =
@@ -166,16 +145,12 @@ void initContext(hwc_context_t *ctx)
     }
 
     ctx->mExtDisplay = new ExternalDisplay(ctx);
-<<<<<<< HEAD
-    for (uint32_t i = 0; i < MAX_DISPLAYS; i++)
-        ctx->mLayerCache[i] = new LayerCache();
-=======
+
     for (uint32_t i = 0; i < MAX_DISPLAYS; i++) {
         ctx->mLayerCache[i] = new LayerCache();
         ctx->mLayerRotMap[i] = new LayerRotMap();
     }
 
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
     ctx->mMDPComp = MDPComp::getObject(ctx->dpyAttr[HWC_DISPLAY_PRIMARY].xres);
     MDPComp::init(ctx);
 
@@ -184,10 +159,7 @@ void initContext(hwc_context_t *ctx)
     ctx->vstate.enable = false;
     ctx->vstate.fakevsync = false;
     ctx->mExtDispConfiguring = false;
-<<<<<<< HEAD
-=======
     ctx->mBasePipeSetup = false;
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 
     //Right now hwc starts the service but anybody could do it, or it could be
     //independent process as well.
@@ -208,14 +180,11 @@ void closeContext(hwc_context_t *ctx)
         ctx->mOverlay = NULL;
     }
 
-<<<<<<< HEAD
-=======
     if(ctx->mRotMgr) {
         delete ctx->mRotMgr;
         ctx->mRotMgr = NULL;
     }
 
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
     for(int i = 0; i < MAX_DISPLAYS; i++) {
         if(ctx->mCopyBit[i]) {
             delete ctx->mCopyBit[i];
@@ -223,13 +192,7 @@ void closeContext(hwc_context_t *ctx)
         }
     }
 
-<<<<<<< HEAD
-    if(ctx->mFbDev) {
-        framebuffer_close(ctx->mFbDev);
-        ctx->mFbDev = NULL;
-=======
     if(ctx->dpyAttr[HWC_DISPLAY_PRIMARY].fd) {
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
         close(ctx->dpyAttr[HWC_DISPLAY_PRIMARY].fd);
         ctx->dpyAttr[HWC_DISPLAY_PRIMARY].fd = -1;
     }
@@ -244,8 +207,6 @@ void closeContext(hwc_context_t *ctx)
             delete ctx->mFBUpdate[i];
             ctx->mFBUpdate[i] = NULL;
         }
-<<<<<<< HEAD
-=======
         if(ctx->mVidOv[i]) {
             delete ctx->mVidOv[i];
             ctx->mVidOv[i] = NULL;
@@ -254,7 +215,6 @@ void closeContext(hwc_context_t *ctx)
             delete ctx->mLayerRotMap[i];
             ctx->mLayerRotMap[i] = NULL;
         }
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
     }
 
     if(ctx->mMDPComp) {
@@ -343,10 +303,7 @@ bool needsScaling(hwc_layer_1_t const* layer) {
 }
 
 bool isAlphaScaled(hwc_layer_1_t const* layer) {
-<<<<<<< HEAD
-    if(needsScaling(layer)) {
-        if(layer->blending != HWC_BLENDING_NONE)
-=======
+
     if(needsScaling(layer) && isAlphaPresent(layer)) {
         return true;
     }
@@ -361,7 +318,6 @@ bool isAlphaPresent(hwc_layer_1_t const* layer) {
         case HAL_PIXEL_FORMAT_RGBA_8888:
         case HAL_PIXEL_FORMAT_BGRA_8888:
             // In any more formats with Alpha go here..
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
             return true;
         default : return false;
         }
@@ -376,14 +332,9 @@ void setListStats(hwc_context_t *ctx,
     ctx->listStats[dpy].fbLayerIndex = list->numHwLayers - 1;
     ctx->listStats[dpy].skipCount = 0;
     ctx->listStats[dpy].needsAlphaScale = false;
-<<<<<<< HEAD
-    ctx->listStats[dpy].yuvCount = 0;
-    ctx->mDMAInUse = false;
-=======
     ctx->listStats[dpy].preMultipliedAlpha = false;
     ctx->listStats[dpy].yuvCount = 0;
     char property[PROPERTY_VALUE_MAX];
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 
     for (size_t i = 0; i < list->numHwLayers; i++) {
         hwc_layer_1_t const* layer = &list->hwLayers[i];
@@ -402,21 +353,14 @@ void setListStats(hwc_context_t *ctx,
             ctx->listStats[dpy].yuvIndices[yuvCount] = i;
             yuvCount++;
 
-<<<<<<< HEAD
-            if((layer->transform & HWC_TRANSFORM_ROT_90) && !ctx->mDMAInUse)
-                ctx->mDMAInUse = true;
-=======
             if(layer->transform & HWC_TRANSFORM_ROT_90)
                 ctx->mNeedsRotator = true;
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
         }
         if(layer->blending == HWC_BLENDING_PREMULT)
             ctx->listStats[dpy].preMultipliedAlpha = true;
 
         if(!ctx->listStats[dpy].needsAlphaScale)
             ctx->listStats[dpy].needsAlphaScale = isAlphaScaled(layer);
-<<<<<<< HEAD
-=======
     }
     if(ctx->listStats[dpy].yuvCount > 0) {
         if (property_get("hw.cabl.yuv", property, NULL) > 0) {
@@ -430,7 +374,6 @@ void setListStats(hwc_context_t *ctx,
                 property_set("hw.cabl.yuv", "0");
             }
         }
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
     }
 }
 
@@ -567,24 +510,13 @@ void closeAcquireFds(hwc_display_contents_1_t* list) {
 }
 
 int hwc_sync(hwc_context_t *ctx, hwc_display_contents_1_t* list, int dpy,
-<<<<<<< HEAD
-                                                        int fd) {
-=======
         int fd) {
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
     int ret = 0;
 
     int acquireFd[MAX_NUM_LAYERS];
     int count = 0;
     int releaseFd = -1;
     int fbFd = -1;
-<<<<<<< HEAD
-    memset(&data, 0, sizeof(data));
-    bool swapzero = false;
-    data.flags = MDP_BUF_SYNC_FLAG_WAIT;
-    data.acq_fen_fd = acquireFd;
-    data.rel_fen_fd = &releaseFd;
-=======
     int rotFd = -1;
     bool swapzero = false;
     int mdpVersion = qdutils::MDPVersion::getInstance().getMDPVersion();
@@ -598,19 +530,12 @@ int hwc_sync(hwc_context_t *ctx, hwc_display_contents_1_t* list, int dpy,
     data.acq_fen_fd = acquireFd;
     data.rel_fen_fd = &releaseFd;
 
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
     char property[PROPERTY_VALUE_MAX];
     if(property_get("debug.egl.swapinterval", property, "1") > 0) {
         if(atoi(property) == 0)
             swapzero = true;
     }
 
-<<<<<<< HEAD
-    //Accumulate acquireFenceFds
-    for(uint32_t i = 0; i < list->numHwLayers; i++) {
-        if(list->hwLayers[i].compositionType == HWC_OVERLAY &&
-                        list->hwLayers[i].acquireFenceFd != -1) {
-=======
     //Send acquireFenceFds to rotator
     if(mdpVersion < qdutils::MDSS_V5) {
         //A-family
@@ -640,7 +565,6 @@ int hwc_sync(hwc_context_t *ctx, hwc_display_contents_1_t* list, int dpy,
     for(uint32_t i = 0; i < list->numHwLayers; i++) {
         if(list->hwLayers[i].compositionType == HWC_OVERLAY &&
                         list->hwLayers[i].acquireFenceFd >= 0) {
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
             if(UNLIKELY(swapzero))
                 acquireFd[count++] = -1;
             else
@@ -649,21 +573,13 @@ int hwc_sync(hwc_context_t *ctx, hwc_display_contents_1_t* list, int dpy,
         if(list->hwLayers[i].compositionType == HWC_FRAMEBUFFER_TARGET) {
             if(UNLIKELY(swapzero))
                 acquireFd[count++] = -1;
-<<<<<<< HEAD
-            else if(fd != -1) {
-=======
             else if(fd >= 0) {
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
                 //set the acquireFD from fd - which is coming from c2d
                 acquireFd[count++] = fd;
                 // Buffer sync IOCTL should be async when using c2d fence is
                 // used
                 data.flags &= ~MDP_BUF_SYNC_FLAG_WAIT;
-<<<<<<< HEAD
-            } else if(list->hwLayers[i].acquireFenceFd != -1)
-=======
             } else if(list->hwLayers[i].acquireFenceFd >= 0)
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
                 acquireFd[count++] = list->hwLayers[i].acquireFenceFd;
         }
     }
@@ -687,19 +603,12 @@ int hwc_sync(hwc_context_t *ctx, hwc_display_contents_1_t* list, int dpy,
         if(list->hwLayers[i].compositionType == HWC_OVERLAY ||
            list->hwLayers[i].compositionType == HWC_FRAMEBUFFER_TARGET) {
             //Populate releaseFenceFds.
-<<<<<<< HEAD
-            if(UNLIKELY(swapzero))
-                list->hwLayers[i].releaseFenceFd = -1;
-            else
-                list->hwLayers[i].releaseFenceFd = dup(releaseFd);
-=======
             if(UNLIKELY(swapzero)) {
                 list->hwLayers[i].releaseFenceFd = -1;
             } else if(list->hwLayers[i].releaseFenceFd < 0) {
                 //If rotator has not already populated this field.
                 list->hwLayers[i].releaseFenceFd = dup(releaseFd);
             }
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
         }
     }
 
@@ -710,16 +619,12 @@ int hwc_sync(hwc_context_t *ctx, hwc_display_contents_1_t* list, int dpy,
 
     if (ctx->mCopyBit[dpy])
         ctx->mCopyBit[dpy]->setReleaseFd(releaseFd);
-<<<<<<< HEAD
-=======
-
     //A-family
     if(mdpVersion < qdutils::MDSS_V5) {
         //Signals when MDP finishes reading rotator buffers.
         ctx->mLayerRotMap[dpy]->setReleaseFd(releaseFd);
     }
 
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
     if(UNLIKELY(swapzero)){
         list->retireFenceFd = -1;
         close(releaseFd);

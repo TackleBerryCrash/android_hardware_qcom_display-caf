@@ -1,10 +1,6 @@
 /*
  * Copyright (C) 2010 The Android Open Source Project
-<<<<<<< HEAD
- * Copyright (c) 2011-2012 The Linux Foundation. All rights reserved.
-=======
  * Copyright (c) 2011-2013 The Linux Foundation. All rights reserved.
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,13 +29,8 @@
 #include "gpu.h"
 #include "memalloc.h"
 #include "alloc_controller.h"
-<<<<<<< HEAD
-#include "mdp_version.h"
-#include <qdMetaData.h>
-=======
 #include <qdMetaData.h>
 #include "mdp_version.h"
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 
 using namespace gralloc;
 
@@ -65,80 +56,6 @@ gpu_context_t::gpu_context_t(const private_module_t* module,
 
 }
 
-<<<<<<< HEAD
-int gpu_context_t::gralloc_alloc_framebuffer_locked(size_t size, int usage,
-                                                    buffer_handle_t* pHandle)
-{
-    private_module_t* m = reinterpret_cast<private_module_t*>(common.module);
-
-    // we don't support framebuffer allocations with graphics heap flags
-    if (usage & GRALLOC_HEAP_MASK) {
-        return -EINVAL;
-    }
-
-    if (m->framebuffer == NULL) {
-        ALOGE("%s: Invalid framebuffer", __FUNCTION__);
-        return -EINVAL;
-    }
-
-    const uint32_t bufferMask = m->bufferMask;
-    const uint32_t numBuffers = m->numBuffers;
-    size_t bufferSize = m->finfo.line_length * m->info.yres;
-
-    //adreno needs FB size to be page aligned
-    bufferSize = roundUpToPageSize(bufferSize);
-
-    if (numBuffers == 1) {
-        // If we have only one buffer, we never use page-flipping. Instead,
-        // we return a regular buffer which will be memcpy'ed to the main
-        // screen when post is called.
-        int newUsage = (usage & ~GRALLOC_USAGE_HW_FB) | GRALLOC_USAGE_HW_2D;
-        return gralloc_alloc_buffer(bufferSize, newUsage, pHandle, BUFFER_TYPE_UI,
-                                    m->fbFormat, m->info.xres, m->info.yres);
-    }
-
-    if (bufferMask >= ((1LU<<numBuffers)-1)) {
-        // We ran out of buffers.
-        return -ENOMEM;
-    }
-
-    // create a "fake" handle for it
-    intptr_t vaddr = intptr_t(m->framebuffer->base);
-    private_handle_t* hnd = new private_handle_t(
-                                dup(m->framebuffer->fd), bufferSize,
-                                private_handle_t::PRIV_FLAGS_USES_ION |
-                                private_handle_t::PRIV_FLAGS_FRAMEBUFFER,
-                                BUFFER_TYPE_UI, m->fbFormat, m->info.xres,
-                                m->info.yres);
-
-    // find a free slot
-    for (uint32_t i=0 ; i<numBuffers ; i++) {
-        if ((bufferMask & (1LU<<i)) == 0) {
-            m->bufferMask |= (1LU<<i);
-            break;
-        }
-        vaddr += bufferSize;
-    }
-
-    hnd->base = vaddr;
-    hnd->offset = vaddr - intptr_t(m->framebuffer->base);
-    *pHandle = hnd;
-    return 0;
-}
-
-
-int gpu_context_t::gralloc_alloc_framebuffer(size_t size, int usage,
-                                             buffer_handle_t* pHandle)
-{
-    private_module_t* m = reinterpret_cast<private_module_t*>(common.module);
-    pthread_mutex_lock(&m->lock);
-    int err = gralloc_alloc_framebuffer_locked(size, usage, pHandle);
-    pthread_mutex_unlock(&m->lock);
-    return err;
-}
-
-=======
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 int gpu_context_t::gralloc_alloc_buffer(size_t size, int usage,
                                         buffer_handle_t* pHandle, int bufferType,
                                         int format, int width, int height)
@@ -154,38 +71,6 @@ int gpu_context_t::gralloc_alloc_buffer(size_t size, int usage,
         data.align = 8192;
     else
         data.align = getpagesize();
-<<<<<<< HEAD
-
-    /* force 1MB alignment selectively for secure buffers, MDP5 onwards */
-    if ((qdutils::MDPVersion::getInstance().getMDPVersion() >= \
-         qdutils::MDSS_V5) && (usage & GRALLOC_USAGE_PROTECTED)) {
-        data.align = ALIGN(data.align, SZ_1M);
-        size = ALIGN(size, data.align);
-    }
-    data.size = size;
-    data.pHandle = (unsigned int) pHandle;
-    err = mAllocCtrl->allocate(data, usage);
-
-    if (!err) {
-#ifdef QCOM_BSP
-        /* allocate memory for enhancement data */
-        alloc_data eData;
-        eData.fd = -1;
-        eData.base = 0;
-        eData.offset = 0;
-        eData.size = ROUND_UP_PAGESIZE(sizeof(MetaData_t));
-        eData.pHandle = data.pHandle;
-        eData.align = getpagesize();
-        int eDataUsage = GRALLOC_USAGE_PRIVATE_SYSTEM_HEAP;
-        int eDataErr = mAllocCtrl->allocate(eData, eDataUsage);
-        ALOGE_IF(eDataErr, "gralloc failed for eDataErr=%s",
-                                          strerror(-eDataErr));
-#endif
-        if (usage & GRALLOC_USAGE_PRIVATE_UNSYNCHRONIZED) {
-            flags |= private_handle_t::PRIV_FLAGS_UNSYNCHRONIZED;
-        }
-
-=======
 
     /* force 1MB alignment selectively for secure buffers, MDP5 onwards */
     if ((qdutils::MDPVersion::getInstance().getMDPVersion() >= \
@@ -219,7 +104,6 @@ int gpu_context_t::gralloc_alloc_buffer(size_t size, int usage,
         }
 #endif
 
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
         if (usage & GRALLOC_USAGE_PRIVATE_EXTERNAL_ONLY) {
             flags |= private_handle_t::PRIV_FLAGS_EXTERNAL_ONLY;
             //The EXTERNAL_BLOCK flag is always an add-on
@@ -341,31 +225,6 @@ int gpu_context_t::alloc_impl(int w, int h, int format, int usage,
 
 int gpu_context_t::free_impl(private_handle_t const* hnd) {
     private_module_t* m = reinterpret_cast<private_module_t*>(common.module);
-<<<<<<< HEAD
-    if (hnd->flags & private_handle_t::PRIV_FLAGS_FRAMEBUFFER) {
-        // free this buffer
-        const size_t bufferSize = m->finfo.line_length * m->info.yres;
-        int index = (hnd->base - m->framebuffer->base) / bufferSize;
-        m->bufferMask &= ~(1<<index);
-    } else {
-        terminateBuffer(&m->base, const_cast<private_handle_t*>(hnd));
-        IMemAlloc* memalloc = mAllocCtrl->getAllocator(hnd->flags);
-        int err = memalloc->free_buffer((void*)hnd->base, (size_t) hnd->size,
-                                        hnd->offset, hnd->fd);
-        if(err)
-            return err;
-#ifdef QCOM_BSP
-        // free the metadata space
-        unsigned long size = ROUND_UP_PAGESIZE(sizeof(MetaData_t));
-        err = memalloc->free_buffer((void*)hnd->base_metadata,
-                                    (size_t) size, hnd->offset_metadata,
-                                    hnd->fd_metadata);
-        if (err)
-            return err;
-#endif
-    }
-=======
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 
     terminateBuffer(&m->base, const_cast<private_handle_t*>(hnd));
     IMemAlloc* memalloc = mAllocCtrl->getAllocator(hnd->flags);

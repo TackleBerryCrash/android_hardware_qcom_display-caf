@@ -71,10 +71,6 @@ public:
     int getCtrlFd() const;
     /* dump the state of the object */
     void dump() const;
-<<<<<<< HEAD
-
-=======
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
     /* Return the dump in the specified buffer */
     void getDump(char *buf, size_t len);
 
@@ -91,19 +87,11 @@ private:
     Rotator* mRot;
     //Whether rotator is used for 0-rot or otherwise
     bool mRotUsed;
-<<<<<<< HEAD
-
-    //Whether we will do downscale opt. This is just a request. If the frame is
-    //not a candidate, we might not do it.
-    bool mRotDownscaleOpt;
-
-=======
     //Whether we will do downscale opt. This is just a request. If the frame is
     //not a candidate, we might not do it.
     bool mRotDownscaleOpt;
     //Whether the source is prerotated.
     bool mPreRotated;
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
     /* Pipe open or closed */
     enum ePipeState {
         CLOSED,

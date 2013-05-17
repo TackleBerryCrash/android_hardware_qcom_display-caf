@@ -1,10 +1,6 @@
 /*
  * Copyright (C) 2008 The Android Open Source Project
-<<<<<<< HEAD
- * Copyright (c) 2011-2012, The Linux Foundation. All rights reserved.
-=======
  * Copyright (c) 2011-2013, The Linux Foundation. All rights reserved.
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -213,11 +209,7 @@ int gralloc_unregister_buffer(gralloc_module_t const* module,
     hnd->base = 0;
 #ifdef QCOM_BSP
     hnd->base_metadata = 0;
-<<<<<<< HEAD
-#endif
-=======
 #else
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
     // Release the genlock
     if (-1 != hnd->genlockHandle) {
         return genlock_release_lock((native_handle_t *)handle);
@@ -326,22 +318,8 @@ int gralloc_unlock(gralloc_module_t const* module,
 
     if (hnd->flags & private_handle_t::PRIV_FLAGS_NEEDS_FLUSH) {
         err = memalloc->clean_buffer((void*)hnd->base,
-<<<<<<< HEAD
-                                     hnd->size, hnd->offset, hnd->fd);
-        ALOGE_IF(err < 0, "cannot flush handle %p (offs=%x len=%x, flags = 0x%x) err=%s\n",
-                 hnd, hnd->offset, hnd->size, hnd->flags, strerror(errno));
-#ifdef QCOM_BSP
-        unsigned long size = ROUND_UP_PAGESIZE(sizeof(MetaData_t));
-        err = memalloc->clean_buffer((void*)hnd->base_metadata, size,
-                hnd->offset_metadata, hnd->fd_metadata);
-        ALOGE_IF(err < 0, "cannot flush handle %p (offs=%x len=%lu, "
-                "flags = 0x%x) err=%s\n", hnd, hnd->offset_metadata, size,
-                hnd->flags, strerror(errno));
-#endif
-=======
                                      hnd->size, hnd->offset, hnd->fd,
                                      CACHE_CLEAN_AND_INVALIDATE);
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
         hnd->flags &= ~private_handle_t::PRIV_FLAGS_NEEDS_FLUSH;
     } else if(hnd->flags & private_handle_t::PRIV_FLAGS_DO_NOT_FLUSH) {
         hnd->flags &= ~private_handle_t::PRIV_FLAGS_DO_NOT_FLUSH;
@@ -421,10 +399,7 @@ int gralloc_perform(struct gralloc_module_t const* module,
                 res = 0;
             }
             break;
-<<<<<<< HEAD
-=======
 #endif
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
         case GRALLOC_MODULE_PERFORM_GET_STRIDE:
             {
                 int width   = va_arg(args, int);
@@ -433,10 +408,6 @@ int gralloc_perform(struct gralloc_module_t const* module,
                 *stride = AdrenoMemInfo::getInstance().getStride(width, format);
                 res = 0;
             } break;
-<<<<<<< HEAD
-#endif
-=======
->>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
         default:
             break;
     }
