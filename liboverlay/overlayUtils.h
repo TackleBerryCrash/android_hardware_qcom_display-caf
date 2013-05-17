@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2011-2012, The Linux Foundation. All rights reserved.
+* Copyright (c) 2011-2013, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -46,7 +46,12 @@
 #include <mdp_version.h>
 #include "gralloc_priv.h" //for interlace
 
+<<<<<<< HEAD
 #ifndef MDP_Y_CBCR_H2V2_VENUS
+=======
+// Older platforms do not support Venus.
+#ifndef VENUS_COLOR_FORMAT
+>>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 #define MDP_Y_CBCR_H2V2_VENUS (MDP_IMGTYPE_LIMIT2 + 1)
 #endif
 
@@ -77,6 +82,12 @@
 #define MDP_OV_PIPE_FORCE_DMA 0x4000
 #endif
 
+<<<<<<< HEAD
+=======
+#define FB_DEVICE_TEMPLATE "/dev/graphics/fb%u"
+#define NUM_FB_DEVICES 3
+
+>>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 namespace overlay {
 
 // fwd
@@ -114,36 +125,6 @@ private:
     const NoCopy& operator=(const NoCopy&);
 };
 
-/*
-* Utility class to query the framebuffer info for primary display
-*
-* Usage:
-*    Outside of functions:
-*       utils::FrameBufferInfo* utils::FrameBufferInfo::sFBInfoInstance = 0;
-*    Inside functions:
-*       utils::FrameBufferInfo::getInstance()->supportTrueMirroring()
-*/
-class FrameBufferInfo {
-
-public:
-    /* ctor init */
-    explicit FrameBufferInfo();
-
-    /* Gets an instance if one does not already exist */
-    static FrameBufferInfo* getInstance();
-
-    /* Gets width of primary framebuffer */
-    int getWidth() const;
-
-    /* Gets height of primary framebuffer */
-    int getHeight() const;
-
-private:
-    int mFBWidth;
-    int mFBHeight;
-    bool mBorderFillSupported;
-    static FrameBufferInfo *sFBInfoInstance;
-};
 
 /* 3D related utils, defines etc...
  * The compound format passed to the overlay is
@@ -157,24 +138,10 @@ enum { INPUT_3D_MASK = 0xFFFF0000,
 enum { BARRIER_LAND = 1,
     BARRIER_PORT = 2 };
 
-/* if SurfaceFlinger process gets killed in bypass mode, In initOverlay()
- * close all the pipes if it is opened after reboot.
- */
-int initOverlay(void);
-
 inline uint32_t format3D(uint32_t x) { return x & 0xFF000; }
-inline uint32_t colorFormat(uint32_t fmt) {
-    /*TODO enable this block only if format has interlace / 3D info in top bits.
-    if(fmt & INTERLACE_MASK) {
-        fmt = fmt ^ HAL_PIXEL_FORMAT_INTERLACE;
-    }
-    fmt = fmt & 0xFFF;*/
-    return fmt;
-}
 inline uint32_t format3DOutput(uint32_t x) {
     return (x & 0xF000) >> SHIFT_OUT_3D; }
 inline uint32_t format3DInput(uint32_t x) { return x & 0xF0000; }
-uint32_t getColorFormat(uint32_t format);
 
 bool isHDMIConnected ();
 bool is3DTV();
@@ -255,10 +222,8 @@ enum { MAX_PATH_LEN = 256 };
 
 /**
  * Rotator flags: not to be confused with orientation flags.
- * Ususally, you want to open the rotator to make sure it is
+ * Usually, you want to open the rotator to make sure it is
  * ready for business.
- * ROT_FLAG_DISABLED: Rotator not used unless required.
- * ROT_FLAG_ENABLED: Rotator used even if not required.
  * */
  enum eRotFlags {
     ROT_FLAGS_NONE = 0,
@@ -268,6 +233,10 @@ enum { MAX_PATH_LEN = 256 };
     //driver. If downscale optimizatation is required,
     //then rotator will be used even if its 0 rotation case.
     ROT_DOWNSCALE_ENABLED = 1 << 1,
+<<<<<<< HEAD
+=======
+    ROT_PREROTATED = 1 << 2,
+>>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 };
 
 enum eRotDownscale {
@@ -298,7 +267,6 @@ enum eMdpFlags {
     OV_MDP_DEINTERLACE = MDP_DEINTERLACE,
     OV_MDP_SECURE_OVERLAY_SESSION = MDP_SECURE_OVERLAY_SESSION,
     OV_MDP_SOURCE_ROTATED_90 = MDP_SOURCE_ROTATED_90,
-    OV_MDP_MEMORY_ID_TYPE_FB = MDP_MEMORY_ID_TYPE_FB,
     OV_MDP_BACKEND_COMPOSITION = MDP_BACKEND_COMPOSITION,
     OV_MDP_BLEND_FG_PREMULT = MDP_BLEND_FG_PREMULT,
     OV_MDP_FLIP_H = MDP_FLIP_LR,
@@ -307,7 +275,7 @@ enum eMdpFlags {
 };
 
 enum eZorder {
-    ZORDER_0,
+    ZORDER_0 = 0,
     ZORDER_1,
     ZORDER_2,
     ZORDER_3,
@@ -315,15 +283,16 @@ enum eZorder {
 };
 
 enum eMdpPipeType {
-    OV_MDP_PIPE_RGB,
+    OV_MDP_PIPE_RGB = 0,
     OV_MDP_PIPE_VG,
     OV_MDP_PIPE_DMA,
     OV_MDP_PIPE_ANY, //Any
 };
 
-/* Used to identify destination pipes
- */
+// Identify destination pipes
+// TODO Names useless, replace with int and change all interfaces
 enum eDest {
+<<<<<<< HEAD
     OV_VG0 = 0,
     OV_RGB0,
     OV_VG1,
@@ -332,7 +301,20 @@ enum eDest {
     OV_RGB2,
     OV_DMA0,
     OV_DMA1,
+=======
+    OV_P0 = 0,
+    OV_P1,
+    OV_P2,
+    OV_P3,
+    OV_P4,
+    OV_P5,
+    OV_P6,
+    OV_P7,
+    OV_P8,
+    OV_P9,
+>>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
     OV_INVALID,
+    OV_MAX = OV_INVALID,
 };
 
 /* Used when a buffer is split over 2 pipes and sent to display */
@@ -391,6 +373,12 @@ struct PipeArgs {
     eRotFlags rotFlags;
 };
 
+// Cannot use HW_OVERLAY_MAGNIFICATION_LIMIT, since at the time
+// of integration, HW_OVERLAY_MAGNIFICATION_LIMIT was a define
+enum { HW_OV_MAGNIFICATION_LIMIT = 20,
+    HW_OV_MINIFICATION_LIMIT  = 8
+};
+
 inline void setMdpFlags(eMdpFlags& f, eMdpFlags v) {
     f = static_cast<eMdpFlags>(setBit(f, v));
 }
@@ -422,6 +410,11 @@ struct ScreenInfo {
 
 int getMdpFormat(int format);
 int getHALFormat(int mdpFormat);
+<<<<<<< HEAD
+=======
+int getDownscaleFactor(const int& src_w, const int& src_h,
+        const int& dst_w, const int& dst_h);
+>>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 
 /* flip is upside down and such. V, H flip
  * rotation is 90, 180 etc
@@ -430,10 +423,13 @@ int getMdpOrient(eTransform rotation);
 int getOverlayMagnificationLimit();
 const char* getFormatString(int format);
 
+<<<<<<< HEAD
 enum {
     HW_OV_MINIFICATION_LIMIT  = 8
 };
 
+=======
+>>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 template <class T>
 inline void memset0(T& t) { ::memset(&t, 0, sizeof(T)); }
 
@@ -596,12 +592,15 @@ inline int getMdpOrient(eTransform rotation) {
     return -1;
 }
 
+<<<<<<< HEAD
 inline uint32_t getColorFormat(uint32_t format)
 {
     return (format == HAL_PIXEL_FORMAT_YV12) ?
             format : colorFormat(format);
 }
 
+=======
+>>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 // FB0
 template <int CHAN>
 inline Dim getPositionS3DImpl(const Whf& whf)
@@ -731,6 +730,7 @@ inline void even_floor(T& value) {
         value--;
 }
 
+<<<<<<< HEAD
 inline const char* getDestStr(eDest dest) {
     switch(dest) {
         case OV_VG0: return "VG0";
@@ -764,6 +764,19 @@ inline eMdpPipeType getPipeType(eDest dest) {
     }
     return OV_MDP_PIPE_ANY;
 }
+=======
+void preRotateSource(const eTransform& tr, Whf& whf, Dim& srcCrop);
+void getDump(char *buf, size_t len, const char *prefix, const mdp_overlay& ov);
+void getDump(char *buf, size_t len, const char *prefix, const msmfb_img& ov);
+void getDump(char *buf, size_t len, const char *prefix, const mdp_rect& ov);
+void getDump(char *buf, size_t len, const char *prefix,
+        const msmfb_overlay_data& ov);
+void getDump(char *buf, size_t len, const char *prefix, const msmfb_data& ov);
+void getDump(char *buf, size_t len, const char *prefix,
+        const msm_rotator_img_info& ov);
+void getDump(char *buf, size_t len, const char *prefix,
+        const msm_rotator_data_info& ov);
+>>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 
 void getDump(char *buf, size_t len, const char *prefix, const mdp_overlay& ov);
 void getDump(char *buf, size_t len, const char *prefix, const msmfb_img& ov);

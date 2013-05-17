@@ -43,11 +43,15 @@ MdssRot::MdssRot() {
 
 MdssRot::~MdssRot() { close(); }
 
+<<<<<<< HEAD
 inline void MdssRot::setEnable() { mEnabled = true; }
 
 inline void MdssRot::setDisable() { mEnabled = false; }
 
 inline bool MdssRot::enabled() const { return mEnabled; }
+=======
+bool MdssRot::enabled() const { return mEnabled; }
+>>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 
 inline void MdssRot::setRotations(uint32_t flags) { mRotInfo.flags |= flags; }
 
@@ -59,6 +63,7 @@ inline uint32_t MdssRot::getDstOffset() const {
     return mRotData.dst_data.offset;
 }
 
+<<<<<<< HEAD
 inline uint32_t MdssRot::getDstFormat() const {
     //For mdss src and dst formats are same
     return mRotInfo.src.format;
@@ -71,6 +76,16 @@ inline void MdssRot::setSrcFB() {
 }
 
 inline bool MdssRot::init() {
+=======
+uint32_t MdssRot::getDstFormat() const {
+    //For mdss src and dst formats are same
+    return mRotInfo.src.format;
+}
+
+uint32_t MdssRot::getSessId() const { return mRotInfo.id; }
+
+bool MdssRot::init() {
+>>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
     if(!utils::openDev(mFd, 0, Res::fbPath, O_RDWR)) {
         ALOGE("MdssRot failed to init fb0");
         return false;
@@ -82,11 +97,6 @@ void MdssRot::setSource(const overlay::utils::Whf& awhf) {
     utils::Whf whf(awhf);
 
     mRotInfo.src.format = whf.format;
-    if(whf.format == MDP_Y_CRCB_H2V2_TILE ||
-        whf.format == MDP_Y_CBCR_H2V2_TILE) {
-        whf.w =  utils::alignup(awhf.w, 64);
-        whf.h = utils::alignup(awhf.h, 32);
-    }
 
     mRotInfo.src.width = whf.w;
     mRotInfo.src.height = whf.h;
@@ -98,6 +108,7 @@ void MdssRot::setSource(const overlay::utils::Whf& awhf) {
     mRotInfo.dst_rect.h = whf.h;
 }
 
+<<<<<<< HEAD
 inline void MdssRot::setDownscale(int ds) {}
 
 inline void MdssRot::setFlags(const utils::eMdpFlags& flags) {
@@ -105,6 +116,15 @@ inline void MdssRot::setFlags(const utils::eMdpFlags& flags) {
 }
 
 inline void MdssRot::setTransform(const utils::eTransform& rot)
+=======
+void MdssRot::setDownscale(int ds) {}
+
+void MdssRot::setFlags(const utils::eMdpFlags& flags) {
+    mRotInfo.flags |= flags;
+}
+
+void MdssRot::setTransform(const utils::eTransform& rot)
+>>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 {
     int flags = utils::getMdpOrient(rot);
     if (flags != -1)
@@ -113,6 +133,7 @@ inline void MdssRot::setTransform(const utils::eTransform& rot)
     //Clients in Android dont factor in 90 rotation while deciding the flip.
     mOrientation = static_cast<utils::eTransform>(flags);
     ALOGE_IF(DEBUG_OVERLAY, "%s: rot=%d", __FUNCTION__, flags);
+<<<<<<< HEAD
 }
 
 inline void MdssRot::setRotatorUsed(const bool& rotUsed) {
@@ -120,6 +141,8 @@ inline void MdssRot::setRotatorUsed(const bool& rotUsed) {
     if(rotUsed) {
         setEnable();
     }
+=======
+>>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 }
 
 inline void MdssRot::doTransform() {
@@ -130,10 +153,11 @@ inline void MdssRot::doTransform() {
 bool MdssRot::commit() {
     doTransform();
     mRotInfo.flags |= MDSS_MDP_ROT_ONLY;
+    mEnabled = true;
     if(!overlay::mdp_wrapper::setOverlay(mFd.getFD(), mRotInfo)) {
         ALOGE("MdssRot commit failed!");
         dump();
-        return false;
+        return (mEnabled = false);
     }
     mRotData.id = mRotInfo.id;
     // reset rotation flags to avoid stale orientation values

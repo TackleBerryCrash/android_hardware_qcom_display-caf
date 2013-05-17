@@ -250,6 +250,14 @@ struct copybit_device_t {
     * @return 0 if successful
     */
   int (*flush_get_fence)(struct copybit_device_t *dev, int* fd);
+<<<<<<< HEAD
+=======
+
+  /* Clears the buffer
+   */
+  int (*clear)(struct copybit_device_t *dev, struct copybit_image_t const *buf,
+               struct copybit_rect_t *rect);
+>>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 };
 
 

@@ -90,6 +90,10 @@ C2D_STATUS (*LINK_c2dGetDriverCapabilities) ( C2D_DRIVER_INFO * driver_info);
 /* create a fence fd for the timestamp */
 C2D_STATUS (*LINK_c2dCreateFenceFD) ( uint32 target_id, c2d_ts_handle timestamp,
                                                             int32 *fd);
+
+C2D_STATUS (*LINK_c2dFillSurface) ( uint32 surface_id, uint32 fill_color,
+                                    C2D_RECT * fill_rect);
+
 /******************************************************************************/
 
 #if defined(COPYBIT_Z180)
@@ -101,7 +105,7 @@ C2D_STATUS (*LINK_c2dCreateFenceFD) ( uint32 target_id, c2d_ts_handle timestamp,
 
 // The following defines can be changed as required i.e. as we encounter
 // complex use cases.
-#define MAX_RGB_SURFACES 8        // Max. RGB layers currently supported per draw
+#define MAX_RGB_SURFACES 32       // Max. RGB layers currently supported per draw
 #define MAX_YUV_2_PLANE_SURFACES 4// Max. 2-plane YUV layers currently supported per draw
 #define MAX_YUV_3_PLANE_SURFACES 1// Max. 3-plane YUV layers currently supported per draw
 // +1 for the destination surface. We cannot have multiple destination surfaces.
@@ -156,6 +160,8 @@ struct copybit_context_t {
     int dst_surface_type;
     bool is_premultiplied_alpha;
     void* time_stamp;
+    bool dst_surface_mapped; // Set when dst surface is mapped to GPU addr
+    void* dst_surface_base; // Stores the dst surface addr
 
     // used for signaling the wait thread
     bool wait_timestamp;
@@ -237,6 +243,8 @@ static void* c2d_wait_loop(void* ptr) {
             ctx->blit_yuv_2_plane_count = 0;
             ctx->blit_yuv_3_plane_count = 0;
             ctx->blit_count = 0;
+            ctx->dst_surface_mapped = false;
+            ctx->dst_surface_base = 0;
         }
         pthread_mutex_unlock(&ctx->wait_cleanup_lock);
         if(ctx->stop_thread)
@@ -328,11 +336,13 @@ int c2diGetBpp(int32 colorformat)
     return c2dBpp;
 }
 
-static uint32 c2d_get_gpuaddr(copybit_context_t* ctx, struct private_handle_t *handle,
-                              int &mapped_idx)
+static uint32 c2d_get_gpuaddr(copybit_context_t* ctx,
+                              struct private_handle_t *handle, int &mapped_idx)
 {
-    uint32 memtype, *gpuaddr;
+    uint32 memtype, *gpuaddr = 0;
     C2D_STATUS rc;
+    int freeindex = 0;
+    bool mapaddr = false;
 
     if(!handle)
         return 0;
@@ -349,23 +359,39 @@ static uint32 c2d_get_gpuaddr(copybit_context_t* ctx, struct private_handle_t *h
         return 0;
     }
 
-    rc = LINK_c2dMapAddr(handle->fd, (void*)handle->base, handle->size,
-                                      handle->offset, memtype, (void**)&gpuaddr);
-
-    if (rc == C2D_STATUS_OK) {
-        // We have mapped the GPU address inside copybit. We need to unmap this
-        // address after the blit. Store this address
-        for (int i = 0; i < MAX_SURFACES; i++) {
-            if (ctx->mapped_gpu_addr[i] == 0) {
-                ctx->mapped_gpu_addr[i] = (uint32) gpuaddr;
-                mapped_idx = i;
-                break;
-            }
+    // Check for a freeindex in the mapped_gpu_addr list
+    for (freeindex = 0; freeindex < MAX_SURFACES; freeindex++) {
+        if (ctx->mapped_gpu_addr[freeindex] == 0) {
+            // free index is available
+            // map GPU addr and use this as mapped_idx
+            mapaddr = true;
+            break;
         }
-
-        return (uint32) gpuaddr;
     }
-    return 0;
+
+    if(mapaddr) {
+        rc = LINK_c2dMapAddr(handle->fd, (void*)handle->base, handle->size,
+                             handle->offset, memtype, (void**)&gpuaddr);
+
+        if (rc == C2D_STATUS_OK) {
+            // We have mapped the GPU address inside copybit. We need to unmap
+            // this address after the blit. Store this address
+            ctx->mapped_gpu_addr[freeindex] = (uint32) gpuaddr;
+            mapped_idx = freeindex;
+        }
+    }
+    return (uint32) gpuaddr;
+}
+
+static void unmap_gpuaddr(copybit_context_t* ctx, int mapped_idx)
+{
+    if (!ctx || (mapped_idx == -1))
+        return;
+
+    if (ctx->mapped_gpu_addr[mapped_idx]) {
+        LINK_c2dUnMapAddr( (void*)ctx->mapped_gpu_addr[mapped_idx]);
+        ctx->mapped_gpu_addr[mapped_idx] = 0;
+    }
 }
 
 static void unmap_gpuaddr(copybit_context_t* ctx, int mapped_idx)
@@ -671,8 +697,41 @@ static int finish_copybit(struct copybit_device_t *dev)
     ctx->blit_yuv_2_plane_count = 0;
     ctx->blit_yuv_3_plane_count = 0;
     ctx->blit_count = 0;
+    ctx->dst_surface_mapped = false;
+    ctx->dst_surface_base = 0;
+
     return status;
 }
+
+static int clear_copybit(struct copybit_device_t *dev,
+                         struct copybit_image_t const *buf,
+                         struct copybit_rect_t *rect)
+{
+    int ret = COPYBIT_SUCCESS;
+    int flags = FLAGS_PREMULTIPLIED_ALPHA;
+    int mapped_dst_idx = -1;
+    struct copybit_context_t* ctx = (struct copybit_context_t*)dev;
+    C2D_RECT c2drect = {rect->l, rect->t, rect->r - rect->l, rect->b - rect->t};
+    pthread_mutex_lock(&ctx->wait_cleanup_lock);
+    if(!ctx->dst_surface_mapped) {
+        ret = set_image(ctx, ctx->dst[RGB_SURFACE], buf,
+                        (eC2DFlags)flags, mapped_dst_idx);
+        if(ret) {
+            ALOGE("%s: set_image error", __FUNCTION__);
+            unmap_gpuaddr(ctx, mapped_dst_idx);
+            pthread_mutex_unlock(&ctx->wait_cleanup_lock);
+            return COPYBIT_FAILURE;
+        }
+        //clear_copybit is the first call made by HWC for each composition
+        //with the dest surface, hence set dst_surface_mapped.
+        ctx->dst_surface_mapped = true;
+        ctx->dst_surface_base = buf->base;
+        ret = LINK_c2dFillSurface(ctx->dst[RGB_SURFACE], 0x0, &c2drect);
+    }
+    pthread_mutex_unlock(&ctx->wait_cleanup_lock);
+    return ret;
+}
+
 
 /** setup rectangles */
 static void set_rects(struct copybit_context_t *ctx,
@@ -1146,14 +1205,23 @@ static int stretch_copybit_internal(
         dst_hnd->gpuaddr = 0;
         dst_image.handle = dst_hnd;
     }
-
-    status = set_image(ctx, ctx->dst[ctx->dst_surface_type], &dst_image,
-                       (eC2DFlags)flags, mapped_dst_idx);
-    if(status) {
-        ALOGE("%s: dst: set_image error", __FUNCTION__);
-        delete_handle(dst_hnd);
-        unmap_gpuaddr(ctx, mapped_dst_idx);
-        return COPYBIT_FAILURE;
+    if(!ctx->dst_surface_mapped) {
+        //map the destination surface to GPU address
+        status = set_image(ctx, ctx->dst[ctx->dst_surface_type], &dst_image,
+                           (eC2DFlags)flags, mapped_dst_idx);
+        if(status) {
+            ALOGE("%s: dst: set_image error", __FUNCTION__);
+            delete_handle(dst_hnd);
+            unmap_gpuaddr(ctx, mapped_dst_idx);
+            return COPYBIT_FAILURE;
+        }
+        ctx->dst_surface_mapped = true;
+        ctx->dst_surface_base = dst->base;
+    } else if(ctx->dst_surface_mapped && ctx->dst_surface_base != dst->base) {
+        // Destination surface for the operation should be same for multiple
+        // requests, this check is catch if there is any case when the
+        // destination changes
+        ALOGE("%s: a different destination surface!!", __FUNCTION__);
     }
 
     // Update the source
@@ -1233,10 +1301,11 @@ static int stretch_copybit_internal(
             return status;
         }
 
-        // Flush the cache
+        // Clean the cache
         IMemAlloc* memalloc = sAlloc->getAllocator(src_hnd->flags);
         if (memalloc->clean_buffer((void *)(src_hnd->base), src_hnd->size,
-                                   src_hnd->offset, src_hnd->fd)) {
+                                   src_hnd->offset, src_hnd->fd,
+                                   gralloc::CACHE_CLEAN)) {
             ALOGE("%s: clean_buffer failed", __FUNCTION__);
             delete_handle(dst_hnd);
             delete_handle(src_hnd);
@@ -1258,8 +1327,7 @@ static int stretch_copybit_internal(
         return COPYBIT_FAILURE;
     }
 
-    src_surface.config_mask = C2D_NO_BILINEAR_BIT | C2D_NO_ANTIALIASING_BIT |
-                              ctx->config_mask;
+    src_surface.config_mask = C2D_NO_ANTIALIASING_BIT | ctx->config_mask;
     src_surface.global_alpha = ctx->src_global_alpha;
     if (enableBlend) {
         if(src_surface.config_mask & C2D_GLOBAL_ALPHA_BIT) {
@@ -1272,12 +1340,6 @@ static int stretch_copybit_internal(
                 unmap_gpuaddr(ctx, mapped_src_idx);
                 return COPYBIT_FAILURE;
             }
-        } else {
-            int c2d_format = get_format(src->format);
-            if(is_alpha(c2d_format))
-                src_surface.config_mask &= ~C2D_ALPHA_BLEND_NONE;
-            else
-                src_surface.config_mask |= C2D_ALPHA_BLEND_NONE;
         }
     } else {
         src_surface.config_mask |= C2D_ALPHA_BLEND_NONE;
@@ -1324,10 +1386,11 @@ static int stretch_copybit_internal(
             unmap_gpuaddr(ctx, mapped_src_idx);
             return status;
         }
-        // Invalidate the cache.
+        // Clean the cache.
         IMemAlloc* memalloc = sAlloc->getAllocator(dst_hnd->flags);
         memalloc->clean_buffer((void *)(dst_hnd->base), dst_hnd->size,
-                               dst_hnd->offset, dst_hnd->fd);
+                               dst_hnd->offset, dst_hnd->fd,
+                               gralloc::CACHE_CLEAN);
     }
     delete_handle(dst_hnd);
     delete_handle(src_hnd);
@@ -1365,9 +1428,14 @@ static int blit_copybit(
     struct copybit_image_t const *src,
     struct copybit_region_t const *region)
 {
-    struct copybit_rect_t dr = { 0, 0, static_cast<int>(dst->w), static_cast<int>(dst->h) };
-    struct copybit_rect_t sr = { 0, 0, static_cast<int>(src->w), static_cast<int>(src->h) };
-    return stretch_copybit_internal(dev, dst, src, &dr, &sr, region, false);
+    int status = COPYBIT_SUCCESS;
+    struct copybit_context_t* ctx = (struct copybit_context_t*)dev;
+    struct copybit_rect_t dr = { 0, 0, (int)dst->w, (int)dst->h };
+    struct copybit_rect_t sr = { 0, 0, (int)src->w, (int)src->h };
+    pthread_mutex_lock(&ctx->wait_cleanup_lock);
+    status = stretch_copybit_internal(dev, dst, src, &dr, &sr, region, false);
+    pthread_mutex_unlock(&ctx->wait_cleanup_lock);
+    return status;
 }
 
 /*****************************************************************************/
@@ -1476,11 +1544,14 @@ static int open_copybit(const struct hw_module_t* module, const char* name,
                                            "c2dGetDriverCapabilities");
     *(void **)&LINK_c2dCreateFenceFD = ::dlsym(ctx->libc2d2,
                                            "c2dCreateFenceFD");
+    *(void **)&LINK_c2dFillSurface = ::dlsym(ctx->libc2d2,
+                                           "c2dFillSurface");
 
     if (!LINK_c2dCreateSurface || !LINK_c2dUpdateSurface || !LINK_c2dReadSurface
         || !LINK_c2dDraw || !LINK_c2dFlush || !LINK_c2dWaitTimestamp ||
         !LINK_c2dFinish  || !LINK_c2dDestroySurface ||
-        !LINK_c2dGetDriverCapabilities || !LINK_c2dCreateFenceFD) {
+        !LINK_c2dGetDriverCapabilities || !LINK_c2dCreateFenceFD ||
+        !LINK_c2dFillSurface) {
         ALOGE("%s: dlsym ERROR", __FUNCTION__);
         clean_up(ctx);
         status = COPYBIT_FAILURE;
@@ -1498,6 +1569,7 @@ static int open_copybit(const struct hw_module_t* module, const char* name,
     ctx->device.stretch = stretch_copybit;
     ctx->device.finish = finish_copybit;
     ctx->device.flush_get_fence = flush_get_fence_copybit;
+    ctx->device.clear = clear_copybit;
 
     /* Create RGB Surface */
     surfDefinition.buffer = (void*)0xdddddddd;

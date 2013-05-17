@@ -52,12 +52,11 @@ void MdpCtrl::reset() {
     mOVInfo.id = MSMFB_NEW_REQUEST;
     mLkgo.id = MSMFB_NEW_REQUEST;
     mOrientation = utils::OVERLAY_TRANSFORM_0;
-    mRotUsed = false;
+    mDownscale = 0;
 }
 
 bool MdpCtrl::close() {
     bool result = true;
-
     if(MSMFB_NEW_REQUEST != static_cast<int>(mOVInfo.id)) {
         if(!mdp_wrapper::unsetOverlay(mFd.getFD(), mOVInfo.id)) {
             ALOGE("MdpCtrl close error in unset");
@@ -66,6 +65,7 @@ bool MdpCtrl::close() {
     }
 
     reset();
+
     if(!mFd.close()) {
         result = false;
     }
@@ -73,8 +73,7 @@ bool MdpCtrl::close() {
     return result;
 }
 
-bool MdpCtrl::setSource(const utils::PipeArgs& args) {
-
+void MdpCtrl::setSource(const utils::PipeArgs& args) {
     setSrcWhf(args.whf);
 
     //TODO These are hardcoded. Can be moved out of setSource.
@@ -85,14 +84,13 @@ bool MdpCtrl::setSource(const utils::PipeArgs& args) {
     setFlags(args.mdpFlags);
     setZ(args.zorder);
     setIsFg(args.isFg);
-    return true;
 }
 
-bool MdpCtrl::setCrop(const utils::Dim& d) {
+void MdpCtrl::setCrop(const utils::Dim& d) {
     setSrcRectDim(d);
-    return true;
 }
 
+<<<<<<< HEAD
 bool MdpCtrl::setPosition(const overlay::utils::Dim& d,
         int fbw, int fbh)
 {
@@ -113,13 +111,23 @@ bool MdpCtrl::setPosition(const overlay::utils::Dim& d,
 }
 
 bool MdpCtrl::setTransform(const utils::eTransform& orient) {
+=======
+void MdpCtrl::setPosition(const overlay::utils::Dim& d) {
+    setDstRectDim(d);
+}
+
+void MdpCtrl::setTransform(const utils::eTransform& orient) {
+>>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
     int rot = utils::getMdpOrient(orient);
     setUserData(rot);
     //getMdpOrient will switch the flips if the source is 90 rotated.
     //Clients in Android dont factor in 90 rotation while deciding the flip.
     mOrientation = static_cast<utils::eTransform>(rot);
+<<<<<<< HEAD
 
     return true;
+=======
+>>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 }
 
 void MdpCtrl::setRotatorUsed(const bool& rotUsed) {
@@ -129,19 +137,19 @@ void MdpCtrl::setRotatorUsed(const bool& rotUsed) {
 }
 
 void MdpCtrl::doTransform() {
-    adjustSrcWhf(mRotUsed);
     setRotationFlags();
-    //180 will be H + V
-    //270 will be H + V + 90
-    if(mOrientation & utils::OVERLAY_TRANSFORM_FLIP_H) {
-            overlayTransFlipH();
-    }
-    if(mOrientation & utils::OVERLAY_TRANSFORM_FLIP_V) {
-            overlayTransFlipV();
-    }
-    if(mOrientation & utils::OVERLAY_TRANSFORM_ROT_90) {
-            overlayTransRot90();
-    }
+    utils::Whf whf = getSrcWhf();
+    utils::Dim dim = getSrcRectDim();
+    utils::preRotateSource(mOrientation, whf, dim);
+    setSrcWhf(whf);
+    setSrcRectDim(dim);
+}
+
+void MdpCtrl::doDownscale() {
+    mOVInfo.src_rect.x >>= mDownscale;
+    mOVInfo.src_rect.y >>= mDownscale;
+    mOVInfo.src_rect.w >>= mDownscale;
+    mOVInfo.src_rect.h >>= mDownscale;
 }
 
 int MdpCtrl::getDownscalefactor() {
@@ -190,6 +198,11 @@ void MdpCtrl::doDownscale(int dscale_factor) {
 
 bool MdpCtrl::set() {
     //deferred calcs, so APIs could be called in any order.
+<<<<<<< HEAD
+=======
+    doTransform();
+    doDownscale();
+>>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
     utils::Whf whf = getSrcWhf();
     if(utils::isYuv(whf.format)) {
         normalizeCrop(mOVInfo.src_rect.x, mOVInfo.src_rect.w);
@@ -213,23 +226,6 @@ bool MdpCtrl::set() {
     return true;
 }
 
-bool MdpCtrl::getScreenInfo(overlay::utils::ScreenInfo& info) {
-    fb_fix_screeninfo finfo;
-    if (!mdp_wrapper::getFScreenInfo(mFd.getFD(), finfo)) {
-        return false;
-    }
-
-    fb_var_screeninfo vinfo;
-    if (!mdp_wrapper::getVScreenInfo(mFd.getFD(), vinfo)) {
-        return false;
-    }
-    info.mFBWidth   = vinfo.xres;
-    info.mFBHeight  = vinfo.yres;
-    info.mFBbpp     = vinfo.bits_per_pixel;
-    info.mFBystride = finfo.line_length;
-    return true;
-}
-
 bool MdpCtrl::get() {
     mdp_overlay ov;
     ov.id = mOVInfo.id;
@@ -241,6 +237,7 @@ bool MdpCtrl::get() {
     return true;
 }
 
+<<<<<<< HEAD
 //Adjust width, height if rotator is used post transform calcs.
 //At this point the format is already updated by updateSrcFormat
 void MdpCtrl::adjustSrcWhf(const bool& rotUsed) {
@@ -253,6 +250,13 @@ void MdpCtrl::adjustSrcWhf(const bool& rotUsed) {
         }
         setSrcWhf(whf);
     }
+=======
+//Update src format based on rotator's destination format.
+void MdpCtrl::updateSrcFormat(const uint32_t& rotDestFmt) {
+    utils::Whf whf = getSrcWhf();
+    whf.format =  rotDestFmt;
+    setSrcWhf(whf);
+>>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 }
 
 //Update src format if rotator used based on rotator's destination format.

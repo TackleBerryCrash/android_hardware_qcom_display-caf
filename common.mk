@@ -27,6 +27,10 @@ endif
 
 ifeq ($(TARGET_BOARD_PLATFORM), msm8974)
     common_flags += -DVENUS_COLOR_FORMAT
+<<<<<<< HEAD
+=======
+    common_flags += -DMDSS_TARGET
+>>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 endif
 
 common_deps  :=
@@ -35,6 +39,11 @@ kernel_includes :=
 # Executed only on QCOM BSPs
 ifeq ($(TARGET_USES_QCOM_BSP),true)
     common_flags += -DQCOM_BSP
+<<<<<<< HEAD
+=======
+endif
+ifeq ($(call is-vendor-board-platform,QCOM),true)
+>>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
     common_deps += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
     kernel_includes += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
 endif

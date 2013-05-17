@@ -93,7 +93,7 @@ bool CopyBit::canUseCopybitForRGB(hwc_context_t *ctx,
 
     if (compositionType & qdutils::COMPOSITION_TYPE_DYN) {
         // DYN Composition:
-        // use copybit, if (TotalRGBRenderArea < 2 * FB Area)
+        // use copybit, if (TotalRGBRenderArea < threashold * FB Area)
         // this is done based on perf inputs in ICS
         // TODO: Above condition needs to be re-evaluated in JB
         int fbWidth =  ctx->dpyAttr[dpy].xres;
@@ -102,7 +102,7 @@ bool CopyBit::canUseCopybitForRGB(hwc_context_t *ctx,
         unsigned int renderArea = getRGBRenderingArea(list);
             ALOGD_IF (DEBUG_COPYBIT, "%s:renderArea %u, fbArea %u",
                                   __FUNCTION__, renderArea, fbArea);
-        if (renderArea <= (2 * fbArea)) {
+        if (renderArea <= (mDynThreshold * fbArea)) {
             return true;
         }
     } else if ((compositionType & qdutils::COMPOSITION_TYPE_MDP)) {
@@ -123,7 +123,8 @@ unsigned int CopyBit::getRGBRenderingArea
     for (unsigned int i=0; i<list->numHwLayers; i++) {
          private_handle_t *hnd = (private_handle_t *)list->hwLayers[i].handle;
          if (hnd) {
-             if (BUFFER_TYPE_UI == hnd->bufferType) {
+             if (BUFFER_TYPE_UI == hnd->bufferType &&
+                 list->hwLayers[i].compositionType != HWC_FRAMEBUFFER_TARGET) {
                  getLayerResolution(&list->hwLayers[i], w, h);
                  renderArea += (w*h);
              }
@@ -155,6 +156,11 @@ bool CopyBit::prepare(hwc_context_t *ctx, hwc_display_contents_1_t *list,
 
     if(ctx->listStats[dpy].skipCount) {
         //GPU will be anyways used
+        return false;
+    }
+
+    if (ctx->listStats[dpy].numAppLayers > MAX_NUM_LAYERS) {
+        // Reached max layers supported by HWC.
         return false;
     }
 
@@ -201,6 +207,25 @@ bool CopyBit::prepare(hwc_context_t *ctx, hwc_display_contents_1_t *list,
     return true;
 }
 
+int CopyBit::clear (private_handle_t* hnd, hwc_rect_t& rect)
+{
+    int ret = 0;
+    copybit_rect_t clear_rect = {rect.left, rect.top,
+        rect.right,
+        rect.bottom};
+
+    copybit_image_t buf;
+    buf.w = ALIGN(hnd->width,32);
+    buf.h = hnd->height;
+    buf.format = hnd->format;
+    buf.base = (void *)hnd->base;
+    buf.handle = (native_handle_t *)hnd;
+
+    copybit_device_t *copybit = mEngine;
+    ret = copybit->clear(copybit, &buf, &clear_rect);
+    return ret;
+}
+
 bool CopyBit::draw(hwc_context_t *ctx, hwc_display_contents_1_t *list,
                                                         int dpy, int32_t *fd) {
     // draw layers marked for COPYBIT
@@ -224,6 +249,12 @@ bool CopyBit::draw(hwc_context_t *ctx, hwc_display_contents_1_t *list,
         close(mRelFd[0]);
         mRelFd[0] = -1;
     }
+
+    //Clear the visible region on the render buffer
+    //XXX: Do this only when needed.
+    hwc_rect_t clearRegion;
+    getNonWormholeRegion(list, clearRegion);
+    clear(renderBuffer, clearRegion);
     // numAppLayers-1, as we iterate from 0th layer index with HWC_COPYBIT flag
     for (int i = 0; i <= (ctx->listStats[dpy].numAppLayers-1); i++) {
         hwc_layer_1_t *layer = &list->hwLayers[i];
@@ -248,6 +279,29 @@ bool CopyBit::draw(hwc_context_t *ctx, hwc_display_contents_1_t *list,
         if(retVal < 0) {
             ALOGE("%s : drawLayerUsingCopybit failed", __FUNCTION__);
         }
+        int ret = -1;
+        if (list->hwLayers[i].acquireFenceFd != -1 ) {
+            // Wait for acquire Fence on the App buffers.
+            ret = sync_wait(list->hwLayers[i].acquireFenceFd, 1000);
+            if(ret < 0) {
+                ALOGE("%s: sync_wait error!! error no = %d err str = %s",
+                                    __FUNCTION__, errno, strerror(errno));
+            }
+            close(list->hwLayers[i].acquireFenceFd);
+            list->hwLayers[i].acquireFenceFd = -1;
+        }
+        retVal = drawLayerUsingCopybit(ctx, &(list->hwLayers[i]),
+                                                    renderBuffer, dpy);
+        copybitLayerCount++;
+        if(retVal < 0) {
+            ALOGE("%s : drawLayerUsingCopybit failed", __FUNCTION__);
+        }
+    }
+
+    if (copybitLayerCount) {
+        copybit_device_t *copybit = getCopyBitDevice();
+        // Async mode
+        copybit->flush_get_fence(copybit, fd);
     }
 
     if (copybitLayerCount) {
@@ -389,7 +443,7 @@ int  CopyBit::drawLayerUsingCopybit(hwc_context_t *dev, hwc_layer_1_t *layer,
        }
        ALOGE("%s:%d::tmp_w = %d,tmp_h = %d",__FUNCTION__,__LINE__,tmp_w,tmp_h);
 
-       int usage = GRALLOC_USAGE_PRIVATE_IOMMU_HEAP | GRALLOC_USAGE_PRIVATE_MM_HEAP;
+       int usage = GRALLOC_USAGE_PRIVATE_IOMMU_HEAP | GRALLOC_USAGE_PRIVATE_UI_CONTIG_HEAP;
 
        if (0 == alloc_buffer(&tmpHnd, tmp_w, tmp_h, fbHandle->format, usage)){
             copybit_image_t tmp_dst;
@@ -479,8 +533,6 @@ bool CopyBit::validateParams(hwc_context_t *ctx,
     }
     return true;
 }
-
-
 int CopyBit::allocRenderBuffers(int w, int h, int f)
 {
     int ret = 0;
@@ -488,10 +540,9 @@ int CopyBit::allocRenderBuffers(int w, int h, int f)
         if (mRenderBuffer[i] == NULL) {
             ret = alloc_buffer(&mRenderBuffer[i],
                                w, h, f,
-                               GRALLOC_USAGE_PRIVATE_IOMMU_HEAP | GRALLOC_USAGE_PRIVATE_MM_HEAP);
+                               GRALLOC_USAGE_PRIVATE_IOMMU_HEAP | GRALLOC_USAGE_PRIVATE_UI_CONTIG_HEAP);
         }
         if(ret < 0) {
-            ALOGE("%s: alloc failed!", __FUNCTION__);
             freeRenderBuffers();
             break;
         }
@@ -520,11 +571,6 @@ void CopyBit::setReleaseFd(int fd) {
     mRelFd[1] = dup(fd);
 }
 
-void CopyBit::dump(android::String8& buf)
-{
-    dumpsys_log(buf, "  mCopyBitDraw=%d\n", mCopyBitDraw);
-}
-
 struct copybit_device_t* CopyBit::getCopyBitDevice() {
     return mEngine;
 }
@@ -536,6 +582,11 @@ CopyBit::CopyBit():mIsModeOn(false), mCopyBitDraw(false),
         mRenderBuffer[i] = NULL;
     mRelFd[0] = -1;
     mRelFd[1] = -1;
+
+    char value[PROPERTY_VALUE_MAX];
+    property_get("debug.hwc.dynThreshold", value, "2");
+    mDynThreshold = atof(value);
+
     if (hw_get_module(COPYBIT_HARDWARE_MODULE_ID, &module) == 0) {
         if(copybit_open(module, &mEngine) < 0) {
             ALOGE("FATAL ERROR: copybit open failed.");

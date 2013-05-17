@@ -36,10 +36,12 @@
 
 #include <GLES/gl.h>
 
-#include "gralloc_priv.h"
+#include <gralloc_priv.h>
 #include "fb_priv.h"
 #include "gr.h"
+#ifndef QCOM_BSP
 #include <genlock.h>
+#endif
 #include <cutils/properties.h>
 #include <profiler.h>
 
@@ -55,7 +57,6 @@ static inline int max(int a, int b) {
 
 enum {
     PAGE_FLIP = 0x00000001,
-    LOCKED    = 0x00000002
 };
 
 struct fb_context_t {
@@ -90,7 +91,11 @@ static int fb_post(struct framebuffer_device_t* dev, buffer_handle_t buffer)
         reinterpret_cast<private_module_t*>(dev->common.module);
     struct mdp_display_commit prim_commit;
     memset(&prim_commit, 0, sizeof(struct mdp_display_commit));
+<<<<<<< HEAD
     prim_commit.flags = MDP_DISPLAY_COMMIT_OVERLAY;
+=======
+    prim_commit.wait_for_finish = 1;
+>>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
     if (ioctl(m->framebuffer->fd, MSMFB_DISPLAY_COMMIT, &prim_commit) == -1) {
         ALOGE("%s: MSMFB_DISPLAY_COMMIT for primary failed, str: %s",
                 __FUNCTION__, strerror(errno));
@@ -249,6 +254,10 @@ int mapFrameBufferLocked(struct private_module_t* module)
     float xdpi = (info.xres * 25.4f) / info.width;
     float ydpi = (info.yres * 25.4f) / info.height;
 #ifdef MSMFB_METADATA_GET
+<<<<<<< HEAD
+=======
+    struct msmfb_metadata metadata;
+>>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
     memset(&metadata, 0 , sizeof(metadata));
     metadata.op = metadata_op_frame_rate;
     if (ioctl(fd, MSMFB_METADATA_GET, &metadata) == -1) {
@@ -330,12 +339,6 @@ int mapFrameBufferLocked(struct private_module_t* module)
     module->framebuffer->base = intptr_t(vaddr);
     memset(vaddr, 0, fbSize);
     module->currentOffset = 0;
-    module->fbPostDone = false;
-    pthread_mutex_init(&(module->fbPostLock), NULL);
-    pthread_cond_init(&(module->fbPostCond), NULL);
-    module->fbPanDone = false;
-    pthread_mutex_init(&(module->fbPanLock), NULL);
-    pthread_cond_init(&(module->fbPanCond), NULL);
     return 0;
 }
 

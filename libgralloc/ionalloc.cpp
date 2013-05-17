@@ -34,15 +34,22 @@
 #include <fcntl.h>
 #include <cutils/log.h>
 #include <errno.h>
-#include "gralloc_priv.h"
+#include <gralloc_priv.h>
 #include "ionalloc.h"
 
 using gralloc::IonAlloc;
 
 #define ION_DEVICE "/dev/ion"
 #ifdef QCOM_BSP
+<<<<<<< HEAD
 #define NEW_ION_API
 #endif
+=======
+#ifndef NEW_ION_API
+#define NEW_ION_API
+#endif
+#endif
+>>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 
 int IonAlloc::open_device()
 {
@@ -158,7 +165,8 @@ int IonAlloc::alloc_buffer(alloc_data& data)
         }
         memset(base, 0, ionAllocData.len);
         // Clean cache after memset
-        clean_buffer(base, data.size, data.offset, fd_data.fd);
+        clean_buffer(base, data.size, data.offset, fd_data.fd,
+                     CACHE_CLEAN_AND_INVALIDATE);
     }
 
 #ifndef NEW_ION_API
@@ -229,7 +237,7 @@ int IonAlloc::unmap_buffer(void *base, size_t size, int offset)
     return err;
 
 }
-int IonAlloc::clean_buffer(void *base, size_t size, int offset, int fd)
+int IonAlloc::clean_buffer(void *base, size_t size, int offset, int fd, int op)
 {
     struct ion_flush_data flush_data;
     struct ion_fd_data fd_data;
@@ -257,7 +265,22 @@ int IonAlloc::clean_buffer(void *base, size_t size, int offset, int fd)
 
 #ifdef NEW_ION_API
     struct ion_custom_data d;
+<<<<<<< HEAD
     d.cmd = ION_IOC_CLEAN_INV_CACHES;
+=======
+    switch(op) {
+    case CACHE_CLEAN:
+        d.cmd = ION_IOC_CLEAN_CACHES;
+        break;
+    case CACHE_INVALIDATE:
+            d.cmd = ION_IOC_INV_CACHES;
+        break;
+    case CACHE_CLEAN_AND_INVALIDATE:
+    default:
+        d.cmd = ION_IOC_CLEAN_INV_CACHES;
+    }
+
+>>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
     d.arg = (unsigned long int)&flush_data;
 
     if(ioctl(mIonFd, ION_IOC_CUSTOM, &d)) {

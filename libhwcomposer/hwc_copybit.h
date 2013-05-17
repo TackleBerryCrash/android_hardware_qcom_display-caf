@@ -44,8 +44,11 @@ public:
 
     void setReleaseFd(int fd);
 
+<<<<<<< HEAD
     void dump(android::String8& buf);
 
+=======
+>>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 private:
     // holds the copybit device
     struct copybit_device_t *mEngine;
@@ -72,6 +75,7 @@ private:
 
     void freeRenderBuffers();
 
+<<<<<<< HEAD
     private_handle_t* mRenderBuffer[NUM_RENDER_BUFFERS];
 
     // Index of the current intermediate render buffer
@@ -80,6 +84,21 @@ private:
     //These are the the release FDs of the T-2 and T-1 round
     //We wait on the T-2 fence
     int mRelFd[2];
+=======
+    int clear (private_handle_t* hnd, hwc_rect_t& rect);
+
+    private_handle_t* mRenderBuffer[NUM_RENDER_BUFFERS];
+
+    // Index of the current intermediate render buffer
+    int mCurRenderBufferIndex;
+
+    //These are the the release FDs of the T-2 and T-1 round
+    //We wait on the T-2 fence
+    int mRelFd[2];
+
+    //Dynamic composition threshold for deciding copybit usage.
+    double mDynThreshold;
+>>>>>>> f97c92e8fca71889b8feccf974cfffbc124c04fe
 };
 
 }; //namespace qhwc
